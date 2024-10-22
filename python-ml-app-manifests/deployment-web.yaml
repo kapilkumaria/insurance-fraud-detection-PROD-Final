@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: flask-app
+          image: 931058976119.dkr.ecr.us-east-1.amazonaws.com/insurance-fraud-detection-app:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: MYSQL_HOST
+              value: "db-service"
+            - name: MYSQL_DATABASE
+              value: "flaskapp"
+            - name: MYSQL_USER
+              value: "flaskuser"
+            - name: MYSQL_PASSWORD
+              value: "password"
+      imagePullSecrets:
+      - name: aws-ecr-secret

@@ -1,0 +1,186 @@
+pipeline {
+    agent any
+    
+    parameters {
+        booleanParam(name: 'PUSH_TO_ECR', defaultValue: true, description: 'Push image to AWS ECR')
+        booleanParam(name: 'PUSH_TO_ARTIFACTORY', defaultValue: false, description: 'Push image to JFrog Artifactory')
+    }
+    
+    environment {
+        ECR_REPO_WEB = '931058976119.dkr.ecr.us-east-1.amazonaws.com/insurance-fraud-detection-app'
+        ECR_REPO_DB = '931058976119.dkr.ecr.us-east-1.amazonaws.com/insurance-fraud-detection-db'
+        ECR_REGION = 'us-east-1'
+        DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
+        DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
+        JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        SONARQUBE_URL = 'http://44.203.244.240:9000'
+        SONARQUBE_TOKEN = credentials('sonarqube-token')
+        
+        
+        // Artifactory details
+        ARTIFACTORY_URL = 'http://35.169.124.140:8082/artifactory'
+        ARTIFACTORY_REPO = 'october19-repo'
+        //ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git credentialsId: 'git-credentials', branch: 'master', url: 'https://github.com/kapilkumaria/insurance-fraud-detection-PROD.git'
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('sonarQube') {
+                        sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=my-python-project \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${SONARQUBE_URL} \
+                          -Dsonar.login=${SONARQUBE_TOKEN}
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Web Image') {
+        steps {
+          script {
+            sh '''
+              cd python-ml-app
+              docker build -t ${DOCKER_IMAGE_WEB} .
+            '''
+           }
+         }
+        }
+        
+        stage('Build Docker DB Image') {
+        steps {
+          script {
+            sh '''
+              docker pull mysql:8.0
+              docker tag mysql:8.0 ${DOCKER_IMAGE_DB}
+            '''
+           }
+         }
+        }
+        
+        stage('Trivy Scan for Docker Web Image ') {
+            steps {
+                script {
+                    // sh "trivy image --severity HIGH,CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${DOCKER_IMAGE_WEB}"
+
+                }
+            }
+        }
+        
+        stage('Trivy Scan for Docker DB Image ') {
+            steps {
+                script {
+                    // sh "trivy image --severity HIGH,CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${DOCKER_IMAGE_DB}"
+
+                }
+            }
+        }
+        
+        stage('Push Web Image to ECR') {
+            when {
+                expression { return params.PUSH_TO_ECR }
+            }
+            steps {
+                script {
+                    withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
+                        sh """
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_WEB}
+                        docker tag ${DOCKER_IMAGE_WEB} ${ECR_REPO_WEB}:latest
+                        docker push ${ECR_REPO_WEB}:latest
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Push DB Image to ECR') {
+            when {
+                expression { return params.PUSH_TO_ECR }
+            }
+            steps {
+                script {
+                    withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
+                        sh """
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_DB}
+                        docker tag ${DOCKER_IMAGE_DB} ${ECR_REPO_DB}:latest
+                        docker push ${ECR_REPO_DB}:latest
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Retrieve AWS Secret') {
+            when {
+            expression { return params.PUSH_TO_ARTIFACTORY }
+            }
+            steps {
+                script {
+                    // Fetch secret from AWS Secrets Manager
+                    def secret = sh(
+                        script: "aws secretsmanager get-secret-value --secret-id my-jfrog-cred --query SecretString --output text --region us-east-1 | jq -r '.'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    // Parse the JSON secret and extract ARTIFACTORY_USER and ARTIFACTORY_PASSWORD
+                    def json = readJSON text: secret
+                    env.ARTIFACTORY_USER = json.ARTIFACTORY_USER
+                    env.ARTIFACTORY_PASSWORD = json.ARTIFACTORY_PASSWORD
+                }
+            }
+        }
+
+        stage('Install JFrog CLI') {
+            when {
+            expression { return params.PUSH_TO_ARTIFACTORY }
+            }
+            steps {
+                sh '''
+                curl -fL https://getcli.jfrog.io | sh
+                chmod +x jfrog
+                '''
+            }
+        }
+        
+        stage('Push Docker Images to Artifactory') {
+          when {
+            expression { return params.PUSH_TO_ARTIFACTORY }
+          }
+          steps {
+            script {
+              def artifactoryWebTag = "35.169.124.140:8082/october19-repo/insurance-fraud-detection-web:latest"
+              def artifactoryDbTag = "35.169.124.140:8082/october19-repo/insurance-fraud-detection-db:latest"
+
+              sh """
+                docker tag ${DOCKER_IMAGE_WEB}:latest ${artifactoryWebTag}
+                docker tag ${DOCKER_IMAGE_DB}:latest ${artifactoryDbTag}
+
+                # Push the tagged Docker images to Artifactory
+                ./jfrog rt docker-push ${artifactoryWebTag} ${ARTIFACTORY_REPO} --build-name=kapil-build --build-number=${BUILD_NUMBER}
+                ./jfrog rt docker-push ${artifactoryDbTag} ${ARTIFACTORY_REPO} --build-name=kapil-build --build-number=${BUILD_NUMBER}
+            """
+            }
+        }
+      }
+    }
+        
+    post {
+      always {
+            // Clean up the workspace
+            cleanWs()
+            }
+    }
+}
