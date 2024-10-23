@@ -24,12 +24,23 @@ pipeline {
     //     //ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
     // }
 
-    stages {
-        stage('Checkout') {
+     stage('Checkout') {
             steps {
                 git credentialsId: 'git-credentials', branch: 'main', url: 'https://github.com/kapilkumaria/insurance-fraud-detection-PROD-Final.git'
+                script {
+                    env.COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.VERSION_TAG = "${env.BUILD_NUMBER}-${env.COMMIT_HASH}"
+                }
             }
         }
+}
+    
+    // stages {
+    //     stage('Checkout') {
+    //         steps {
+    //             git credentialsId: 'git-credentials', branch: 'main', url: 'https://github.com/kapilkumaria/insurance-fraud-detection-PROD-Final.git'
+    //         }
+    //     }
         
     //     stage('SonarQube Analysis') {
     //         steps {
@@ -183,4 +194,4 @@ pipeline {
     //         cleanWs()
     //         }
     // }
-}
+// }
