@@ -27,7 +27,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'git-credentials', branch: 'master', url: 'https://github.com/kapilkumaria/insurance-fraud-detection-PROD.git'
+                git credentialsId: 'git-credentials', branch: 'main', url: 'https://github.com/kapilkumaria/insurance-fraud-detection-PROD-Final.git'
             }
         }
         
