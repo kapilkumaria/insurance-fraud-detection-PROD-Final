@@ -23,7 +23,7 @@ pipeline {
     //     ARTIFACTORY_REPO = 'october19-repo'
     //     //ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
     // }
-
+    stages {
      stage('Checkout') {
             steps {
                 git credentialsId: 'git-credentials', branch: 'main', url: 'https://github.com/kapilkumaria/insurance-fraud-detection-PROD-Final.git'
@@ -33,6 +33,7 @@ pipeline {
                 }
             }
         }
+    }
 }
     
     // stages {
