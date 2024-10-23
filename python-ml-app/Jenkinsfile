@@ -30,6 +30,8 @@ pipeline {
                 script {
                     env.COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.VERSION_TAG = "${env.BUILD_NUMBER}-${env.COMMIT_HASH}"
+                    echo "Commit Hash: ${env.COMMIT_HASH}"
+                    echo "Version Tag: ${env.VERSION_TAG}"
                 }
             }
         }
