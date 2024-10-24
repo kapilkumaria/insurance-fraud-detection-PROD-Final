@@ -101,38 +101,69 @@ pipeline {
         }
 
         stage('Push Web Image to ECR') {
-            when {
-                expression { return params.PUSH_TO_ECR }
-            }
+          when {
+              expression { return params.PUSH_TO_ECR }
+          }
             steps {
-                script {
-                    withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
-                        sh """
-                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_WEB}
-                        docker tag ${DOCKER_IMAGE_WEB} ${ECR_REPO_WEB}:latest
-                        docker push ${ECR_REPO_WEB}:latest
-                        """
-                    }
-                }
+               withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                   script {
+                       sh """
+                           export VAULT_ADDR=${VAULT_ADDR}
+                           export VAULT_TOKEN=\$VAULT_TOKEN
+                           # Fetch AWS credentials from Vault
+                           vault kv get -format=json secret/aws > vault-aws-output.json
+                       """
+                
+                       // Parse the JSON output to extract AWS credentials
+                       def vaultOutput = readJSON file: 'vault-aws-output.json'
+                       def AWS_ACCESS_KEY_ID = vaultOutput.data.data.AWS_ACCESS_KEY_ID
+                       def AWS_SECRET_ACCESS_KEY = vaultOutput.data.data.AWS_SECRET_ACCESS_KEY
+
+                      // Use the AWS credentials to login to ECR and push the Docker image
+                      withEnv(["AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"]) {
+                         sh """
+                               aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_WEB}
+                               docker tag ${DOCKER_IMAGE_WEB} ${ECR_REPO_WEB}:latest
+                               docker push ${ECR_REPO_WEB}:latest
+                         """
+                      }
+                 }
+             }
+           }
+        }
+
+       stage('Push DB Image to ECR') {
+           when {
+               expression { return params.PUSH_TO_ECR }
+           }
+           steps {
+                 withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                    script {
+                          sh """
+                             export VAULT_ADDR=${VAULT_ADDR}
+                             export VAULT_TOKEN=\$VAULT_TOKEN
+                            # Fetch AWS credentials from Vault
+                             vault kv get -format=json secret/aws > vault-aws-output.json
+                          """
+                
+                           // Parse the JSON output to extract AWS credentials
+                           def vaultOutput = readJSON file: 'vault-aws-output.json'
+                           def AWS_ACCESS_KEY_ID = vaultOutput.data.data.AWS_ACCESS_KEY_ID
+                           def AWS_SECRET_ACCESS_KEY = vaultOutput.data.data.AWS_SECRET_ACCESS_KEY
+
+                           // Use the AWS credentials to login to ECR and push the Docker image
+                           withEnv(["AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"]) {
+                              sh """
+                                  aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_DB}
+                                  docker tag ${DOCKER_IMAGE_DB} ${ECR_REPO_DB}:latest
+                                  docker push ${ECR_REPO_DB}:latest
+                              """
+                           }
+                      }
+                 }
             }
         }
 
-        stage('Push DB Image to ECR') {
-            when {
-                expression { return params.PUSH_TO_ECR }
-            }
-            steps {
-                script {
-                    withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
-                        sh """
-                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_DB}
-                        docker tag ${DOCKER_IMAGE_DB} ${ECR_REPO_DB}:latest
-                        docker push ${ECR_REPO_DB}:latest
-                        """
-                    }
-                }
-            }
-        }
     }
     post {
         always {
