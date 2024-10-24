@@ -4,6 +4,8 @@ pipeline {
         VAULT_ADDR = 'http://44.221.215.67:8200'
         PATH = "${PATH}:/opt/sonar-scanner/bin"
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
+        DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
         
     }
     stages {
@@ -52,6 +54,27 @@ pipeline {
                     }
                 }
             }
+        }
+        stage('Build Docker Web Image') {
+        steps {
+          script {
+            sh '''
+              cd python-ml-app
+              docker build -t ${DOCKER_IMAGE_WEB} .
+            '''
+           }
+         }
+        }
+        
+        stage('Build Docker DB Image') {
+        steps {
+          script {
+            sh '''
+              docker pull mysql:8.0
+              docker tag mysql:8.0 ${DOCKER_IMAGE_DB}
+            '''
+           }
+         }
         }
     }
     post {
