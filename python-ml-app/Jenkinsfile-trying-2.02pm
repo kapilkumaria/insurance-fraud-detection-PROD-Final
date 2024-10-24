@@ -162,9 +162,23 @@ pipeline {
                 }
             }
         }
-        
 
-        
+        stage('Deploy to EKS') {
+            steps {
+                script {
+                    sh """
+                      export AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}
+                      export AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}
+                      aws eks update-kubeconfig --region us-east-1 --name kk-oct24-cluster
+                      kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
+                      kubectl apply -f python-ml-app-manifests/service-mysql.yaml
+                      kubectl apply -f python-ml-app-manifests/deployment-web.yaml
+                      kubectl apply -f python-ml-app-manifests/service-web.yaml
+                    """
+                    echo 'Application deployed to EKS successfully.'
+                }
+            }
+        }   
     }
     post {
         always {
