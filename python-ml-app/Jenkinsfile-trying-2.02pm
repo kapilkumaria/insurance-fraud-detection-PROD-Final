@@ -20,6 +20,8 @@ pipeline {
                         export VAULT_ADDR=${VAULT_ADDR}
                         export VAULT_TOKEN=\$VAULT_TOKEN
                         vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
+                        vault kv get -format=json secret/ecr > vault-ecr-output.json
+                        vault kv get -format=json secret/aws > vault-aws-output.json
                     """
                     script {
                         // Parse the JSON output for the SonarQube URL and token
