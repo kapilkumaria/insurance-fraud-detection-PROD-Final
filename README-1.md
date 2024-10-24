@@ -135,3 +135,19 @@ This sequence covers the installation, initial configuration, policy management,
 It ensures that Vault is properly set up, unsealed, and accessible both through the command line and the web UI. 
 Make sure to handle the unseal keys and tokens securely, as they are critical for Vault operations. 
 If you're planning on using this setup in a production environment, consider enabling TLS and using a more secure storage backend than local file storage.
+
+# Storing GitHub Credentials:
+
+1. Create GitHub Secret in Vault:
+```
+vault kv put secret/github token='<replace-it-with-your-github-token>'
+```
+
+2. Verify the Stored GitHub Credentials:
+```
+vault kv get secret/github
+``` 
+
+
+
+
