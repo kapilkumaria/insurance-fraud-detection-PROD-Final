@@ -4,46 +4,24 @@ pipeline {
         VAULT_ADDR = 'http://44.221.215.67:8200'
     }
     stages {
-        stage('Retrieve Secrets and Checkout Code') {
-            stage('Retrieve Secrets and Checkout Code') {
+        stage('Checkout Code') {
             steps {
                 withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
                     sh """
                         export VAULT_ADDR=${VAULT_ADDR}
                         export VAULT_TOKEN=\$VAULT_TOKEN
-                        vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
-                        vault kv get -format=json secret/github > vault-github-output.json
+                        vault kv get -format=json secret/github > vault-output.json
                     """
                     script {
-                        // Parse the JSON output for SonarQube information
-                        def sonarqubeOutput = readJSON file: 'vault-sonarqube-output.json'
-                        def sonarqubeUrl = sonarqubeOutput.data.data.SONARQUBE_URL
-                        def sonarqubeToken = sonarqubeOutput.data.data.SONARQUBE_TOKEN
+                        // Parse the JSON output for username and token
+                        def vaultOutput = readJSON file: 'vault-output.json'
+                        def githubUsername = vaultOutput.data.data.username
+                        def githubToken = vaultOutput.data.data.token
 
-                        // Set environment variables for the SonarQube stage
-                        env.SONARQUBE_URL = sonarqubeUrl
-                        env.SONARQUBE_AUTH_TOKEN = sonarqubeToken
+                        echo "GITHUB_USERNAME: ${githubUsername}"
+                        echo "GITHUB_TOKEN: ${githubToken != null ? 'REDACTED' : 'null'}"
 
-                        echo "Retrieved SonarQube URL: ${sonarqubeUrl}"
-                        echo "SonarQube token has been set."
-
-                        // Parse the JSON output for GitHub credentials
-                        def githubOutput = readJSON file: 'vault-github-output.json'
-                        def githubUsername = githubOutput.data.data.username
-                        def githubToken = githubOutput.data.data.token
-
-                        // Set environment variables for GitHub authentication
-                        env.GITHUB_USERNAME = githubUsername
-                        env.GITHUB_TOKEN = githubToken
-
-                        echo "GitHub username: ${githubUsername}"
-                    }
-                }
-            }
-        }
-        // Clone or pull the repository
-        stage('Checkout the Code') {
-            steps {
+                        // Clone or pull the repository
                         sh """
                             if [ -d "insurance-fraud-detection-PROD-Final" ]; then
                                 cd insurance-fraud-detection-PROD-Final
@@ -54,7 +32,9 @@ pipeline {
                                 git clone https://github.com/${githubUsername}/insurance-fraud-detection-PROD-Final.git
                             fi
                         """
-             }
+                    }
+               }
+            }
         }
 
              
