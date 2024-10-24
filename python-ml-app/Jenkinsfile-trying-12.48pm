@@ -26,13 +26,22 @@ pipeline {
                         def vaultOutput = readJSON file: 'vault-sonarqube-output.json'
                         def SONARQUBE_URL = vaultOutput.data.data.SONARQUBE_URL
                         def SONARQUBE_TOKEN = vaultOutput.data.data.SONARQUBE_TOKEN
+                        def ECR_REPO_WEB = vaultOutputECR.data.data.ECR_REPO_WEB
+                        def ECR_REPO_DB = vaultOutputECR.data.data.ECR_REPO_DB
 
                         echo "SonarQube URL: ${SONARQUBE_URL}"
                         echo "SonarQube token retrieved successfully."
+                        
+                        echo "ECR Web Repo: ${ECR_REPO_WEB}"
+                        echo "ECR DB Repo: ${ECR_REPO_DB}"
+                        echo "ECR Repos retrieved successfully."
 
                         // Set environment variables for the SonarQube analysis
                         env.SONAR_HOST_URL = SONARQUBE_URL
                         env.SONAR_AUTH_TOKEN = SONARQUBE_TOKEN
+
+                        env.ECR_REPO_WEB = ECR_REPO_WEB
+                        env.ECR_REPO_DB = ECR_REPO_DB
                     }
                 }
             }
@@ -101,69 +110,38 @@ pipeline {
         }
 
         stage('Push Web Image to ECR') {
-          when {
-              expression { return params.PUSH_TO_ECR }
-          }
+            when {
+                expression { return params.PUSH_TO_ECR }
+            }
             steps {
-               withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
-                   script {
-                       sh """
-                           export VAULT_ADDR=${VAULT_ADDR}
-                           export VAULT_TOKEN=\$VAULT_TOKEN
-                           # Fetch AWS credentials from Vault
-                           vault kv get -format=json secret/aws > vault-aws-output.json
-                       """
-                
-                       // Parse the JSON output to extract AWS credentials
-                       def vaultOutput = readJSON file: 'vault-aws-output.json'
-                       def AWS_ACCESS_KEY_ID = vaultOutput.data.data.AWS_ACCESS_KEY_ID
-                       def AWS_SECRET_ACCESS_KEY = vaultOutput.data.data.AWS_SECRET_ACCESS_KEY
-
-                      // Use the AWS credentials to login to ECR and push the Docker image
-                      withEnv(["AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"]) {
-                         sh """
-                               aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_WEB}
-                               docker tag ${DOCKER_IMAGE_WEB} ${ECR_REPO_WEB}:latest
-                               docker push ${ECR_REPO_WEB}:latest
-                         """
-                      }
-                 }
-             }
-           }
-        }
-
-       stage('Push DB Image to ECR') {
-           when {
-               expression { return params.PUSH_TO_ECR }
-           }
-           steps {
-                 withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
-                    script {
-                          sh """
-                             export VAULT_ADDR=${VAULT_ADDR}
-                             export VAULT_TOKEN=\$VAULT_TOKEN
-                            # Fetch AWS credentials from Vault
-                             vault kv get -format=json secret/aws > vault-aws-output.json
-                          """
-                
-                           // Parse the JSON output to extract AWS credentials
-                           def vaultOutput = readJSON file: 'vault-aws-output.json'
-                           def AWS_ACCESS_KEY_ID = vaultOutput.data.data.AWS_ACCESS_KEY_ID
-                           def AWS_SECRET_ACCESS_KEY = vaultOutput.data.data.AWS_SECRET_ACCESS_KEY
-
-                           // Use the AWS credentials to login to ECR and push the Docker image
-                           withEnv(["AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"]) {
-                              sh """
-                                  aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_DB}
-                                  docker tag ${DOCKER_IMAGE_DB} ${ECR_REPO_DB}:latest
-                                  docker push ${ECR_REPO_DB}:latest
-                              """
-                           }
-                      }
-                 }
+                script {
+                    withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                        sh """
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${env.ECR_REPO_WEB}
+                        docker tag ${DOCKER_IMAGE_WEB} ${env.ECR_REPO_WEB}:latest
+                        docker push ${env.ECR_REPO_WEB}:latest
+                        """
+                    }
+                }
             }
         }
-
+        
+        stage('Push DB Image to ECR') {
+            when {
+                expression { return params.PUSH_TO_ECR }
+            }
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                        sh """
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${env.ECR_REPO_DB}
+                        docker tag ${DOCKER_IMAGE_DB} ${env.ECR_REPO_DB}:latest
+                        docker push ${env.ECR_REPO_DB}:latest
+                        """
+                    }
+                }
+            }
+        }
     }
     post {
         always {
