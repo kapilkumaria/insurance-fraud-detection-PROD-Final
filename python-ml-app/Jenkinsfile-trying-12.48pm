@@ -95,6 +95,40 @@ pipeline {
                 }
             }
         }
+
+        stage('Push Web Image to ECR') {
+            when {
+                expression { return params.PUSH_TO_ECR }
+            }
+            steps {
+                script {
+                    withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
+                        sh """
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_WEB}
+                        docker tag ${DOCKER_IMAGE_WEB} ${ECR_REPO_WEB}:latest
+                        docker push ${ECR_REPO_WEB}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Push DB Image to ECR') {
+            when {
+                expression { return params.PUSH_TO_ECR }
+            }
+            steps {
+                script {
+                    withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
+                        sh """
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REPO_DB}
+                        docker tag ${DOCKER_IMAGE_DB} ${ECR_REPO_DB}:latest
+                        docker push ${ECR_REPO_DB}:latest
+                        """
+                    }
+                }
+            }
+        }
     }
     post {
         always {
