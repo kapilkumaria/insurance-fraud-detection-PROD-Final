@@ -52,6 +52,12 @@ pipeline {
                 }
             }
         }
+        stage('Verify SonarScanner Installation') {
+            steps {
+                sh 'sonar-scanner --version'
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 script {
