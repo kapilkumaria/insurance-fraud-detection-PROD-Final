@@ -11,6 +11,7 @@ pipeline {
                         export VAULT_ADDR=${VAULT_ADDR}
                         export VAULT_TOKEN=\$VAULT_TOKEN
                         vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
+                        vault kv get -format=json secret/github > vault-github-output.json
                     """
                     script {
                         // Parse the JSON output for SonarQube information
@@ -24,6 +25,17 @@ pipeline {
 
                         echo "Retrieved SonarQube URL: ${sonarqubeUrl}"
                         echo "SonarQube token has been set."
+
+                        // Parse the JSON output for GitHub credentials
+                        def githubOutput = readJSON file: 'vault-github-output.json'
+                        def githubUsername = githubOutput.data.data.username
+                        def githubToken = githubOutput.data.data.token
+
+                        // Set environment variables for GitHub authentication
+                        env.GITHUB_USERNAME = githubUsername
+                        env.GITHUB_TOKEN = githubToken
+
+                        echo "GitHub username: ${githubUsername}"
                     }
                 }
             }
@@ -31,14 +43,12 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    // Use GitHub credentials from Vault for authentication, if needed
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        sh """
-                            git config --global credential.helper store
-                            echo "https://${env.GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
-                            git clone https://github.com/${env.GITHUB_USERNAME}/your-repository.git
-                        """
-                    }
+                    // Use the GitHub credentials for cloning the repository
+                    sh """
+                        git config --global credential.helper store
+                        echo "https://${env.GITHUB_USERNAME}:${env.GITHUB_TOKEN}@github.com" > ~/.git-credentials
+                        git clone https://github.com/${env.GITHUB_USERNAME}/insurance-fraud-detection-PROD-Final.git
+                    """
                 }
             }
         }
@@ -46,30 +56,26 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv('sonarQube') {
-                       sh 'sonar-scanner --version' // Check if SonarScanner is available
-                         sh """
-                            sonar-scanner \
-                            -Dsonar.projectKey=my-python-project \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=${env.SONARQUBE_URL} \
-                            -Dsonar.login=${env.SONARQUBE_AUTH_TOKEN}
-                         """
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=my-python-project \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${env.SONARQUBE_URL} \
+                          -Dsonar.login=${env.SONARQUBE_AUTH_TOKEN}
+                        """
                     }
                 }
             }
         }
-
         stage('Build and Push to ECR') {
             steps {
-                // Add your build steps here if needed (e.g., Docker build and push)
                 echo 'Build and push to ECR step.'
             }
         }
     }
     post {
         always {
-            // Clean up any temporary files or secrets
-            sh 'rm -f vault-sonarqube-output.json'
+            sh 'rm -f vault-sonarqube-output.json vault-github-output.json'
         }
         success {
             echo 'Pipeline completed successfully!'
