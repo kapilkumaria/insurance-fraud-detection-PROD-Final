@@ -46,18 +46,19 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv('sonarQube') {
-                        // Ensure SonarScanner is available and run the analysis
-                        sh """
-                        sonar-scanner \
-                          -Dsonar.projectKey=my-python-project \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=${env.SONARQUBE_URL} \
-                          -Dsonar.login=${env.SONARQUBE_AUTH_TOKEN}
-                        """
+                       sh 'sonar-scanner --version' // Check if SonarScanner is available
+                         sh """
+                            sonar-scanner \
+                            -Dsonar.projectKey=my-python-project \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=${env.SONARQUBE_URL} \
+                            -Dsonar.login=${env.SONARQUBE_AUTH_TOKEN}
+                         """
                     }
                 }
             }
         }
+
         stage('Build and Push to ECR') {
             steps {
                 // Add your build steps here if needed (e.g., Docker build and push)
