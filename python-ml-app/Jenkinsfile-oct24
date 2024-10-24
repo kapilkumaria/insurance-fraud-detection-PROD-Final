@@ -5,6 +5,7 @@ pipeline {
     }
     stages {
         stage('Retrieve Secrets and Checkout Code') {
+            stage('Retrieve Secrets and Checkout Code') {
             steps {
                 withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
                     sh """
