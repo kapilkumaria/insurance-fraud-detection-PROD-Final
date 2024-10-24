@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        VAULT_ADDR = 'http://44.221.215.67:8200'
+        VAULT_ADDR = 'http://127.0.0.1/32:8200'
         PATH = "${PATH}:/opt/sonar-scanner/bin"
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
