@@ -25,18 +25,29 @@ pipeline {
                     """
                     script {
                         // Parse the JSON output for the SonarQube URL and token
-                        def vaultOutput = readJSON file: 'vault-sonarqube-output.json'
-                        def SONARQUBE_URL = vaultOutput.data.data.SONARQUBE_URL
-                        def SONARQUBE_TOKEN = vaultOutput.data.data.SONARQUBE_TOKEN
+                        def vaultSonarOutput = readJSON file: 'vault-sonarqube-output.json'
+                        def vaultEcrOutput = readJSON file: 'vault-ecr-output.json'
+                        def vaultAwsOutput = readJSON file: 'vault-aws-output.json'
+
+                        def SONARQUBE_URL = vaultSonarOutput.data.data.SONARQUBE_URL
+                        def SONARQUBE_TOKEN = vaultSonarOutput.data.data.SONARQUBE_TOKEN
+                        def ECR_REPO_WEB = vaultEcrOutput.data.data.ECR_REPO_WEB
+                        def ECR_REPO_DB = vaultEcrOutput.data.data.ECR_REPO_DB
+                        def AWS_ACCESS_KEY_ID = vaultAwsOutput.data.data.AWS_ACCESS_KEY_ID
+                        def AWS_SECRET_ACCESS_KEY = vaultAwsOutput.data.data.AWS_SECRET_ACCESS_KEY
                         
 
                         echo "SonarQube URL: ${SONARQUBE_URL}"
                         echo "SonarQube token retrieved successfully."
                         
                         
-                        // Set environment variables for the SonarQube analysis
+                        // Set environment variables for the SonarQube analysis and AWS credentials
                         env.SONAR_HOST_URL = SONARQUBE_URL
                         env.SONAR_AUTH_TOKEN = SONARQUBE_TOKEN
+                        env.ECR_REPO_WEB = ECR_REPO_WEB
+                        env.ECR_REPO_DB = ECR_REPO_DB
+                        env.AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+                        env.AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
 
                         
                     }
