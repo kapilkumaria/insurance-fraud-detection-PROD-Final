@@ -59,11 +59,7 @@ pipeline {
                 }
             }
         }
-        stage('Build and Push to ECR') {
-            steps {
-                echo 'Build and push to ECR step.'
-            }
-        }
+        
     }
     post {
         always {
