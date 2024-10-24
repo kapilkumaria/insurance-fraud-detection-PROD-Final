@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+    environment {
+        VAULT_ADDR = 'http://44.221.215.67:8200'
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                    sh """
+                        export VAULT_ADDR=${VAULT_ADDR}
+                        export VAULT_TOKEN=\$VAULT_TOKEN
+                        vault kv get -format=json secret/github > vault-output.json
+                    """
+                    script {
+                        // Parse the JSON output for username and token
+                        def vaultOutput = readJSON file: 'vault-output.json'
+                        def githubUsername = vaultOutput.data.data.username
+                        def githubToken = vaultOutput.data.data.token
+
+                        echo "GITHUB_USERNAME: ${githubUsername}"
+                        echo "GITHUB_TOKEN: ${githubToken != null ? 'REDACTED' : 'null'}"
+
+                        // Clone or pull the repository
+                        sh """
+                            if [ -d "insurance-fraud-detection-PROD-Final" ]; then
+                                cd insurance-fraud-detection-PROD-Final
+                                git pull
+                            else
+                                git config --global credential.helper store
+                                echo "https://${githubUsername}:${githubToken}@github.com" > ~/.git-credentials
+                                git clone https://github.com/${githubUsername}/insurance-fraud-detection-PROD-Final.git
+                            fi
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
