@@ -93,23 +93,17 @@ vault operator unseal
 # provide 3 unseal keys
 # provide token
 ```
+## Recap of Commands:
 
-
-
-
-
-Recap of Commands:
-
-1. Verify Secrets Engine:
+Step 15 - Verify Secrets Engine:
 
 ```
 vault secrets list
 ```
 
-Update and Write Policy:
+Step 16 - Update and Write Policy:
 
-hcl
-
+```
 path "secret/data/myapp/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
@@ -117,27 +111,37 @@ path "secret/data/myapp/*" {
 path "secret/metadata/myapp/*" {
   capabilities = ["list"]
 }
-
-Apply:
-
-bash
-
+```
+```
 vault policy write myapp-policy myapp-policy.hcl
+```
+Step 17 - Generate a Token with the Correct Policy:
 
-Generate a Token with the Correct Policy:
+```
+vault token create -policy=myapp-policy -ttl=48h
+```
+Step 18 - Use the New Token:
 
-bash
-
-vault token create -policy=myapp-policy -ttl=24h
-
-Use the New Token:
-
-bash
-
+```
 export VAULT_TOKEN=<newly-created-token>
+```
 
-Store the Secrets:
+Step 19 - Store the Secrets
+```
+vault kv put secret/myapp aws_access_key_id='YOUR_AWS_ACCESS_KEY_ID' aws_secret_access_key='YOUR_AWS_SECRET_ACCESS_KEY' sonarqube_token='YOUR_SONARQUBE_TOKEN' artifactory_user='YOUR_ARTIFACTORY_USER' artifactory_password='YOUR_ARTIFACTORY_PASSWORD'
+```
 
-bash
+Step 20 - Get the secrets in Terminal
+```
+vault kv get secret/myapp
+# See all the secrets in vault
+```
 
-vault kv put secret/myapp aws_access_key_id='YOUR_AWS_ACCESS_KEY_ID' aws_secret_access_key='YOUR_AWS_SECRET_ACCE
+Step 21 - Get the secrets in UI
+```
+http://<ec2-public-ip:8200/ui/vault/secrets/secret/kv/list
+```
+
+
+Step 21 - 
+
