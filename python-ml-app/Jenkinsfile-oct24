@@ -28,20 +28,53 @@ pipeline {
                 }
             }
         }
+        stage('Checkout Code') {
+            steps {
+                script {
+                    // Use GitHub credentials from Vault for authentication, if needed
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh """
+                            git config --global credential.helper store
+                            echo "https://${env.GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+                            git clone https://github.com/${env.GITHUB_USERNAME}/your-repository.git
+                        """
+                    }
+                }
+            }
+        }
         stage('SonarQube Analysis') {
             steps {
                 script {
                     withSonarQubeEnv('sonarQube') {
-                        sh '''
+                        // Ensure SonarScanner is available and run the analysis
+                        sh """
                         sonar-scanner \
                           -Dsonar.projectKey=my-python-project \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=${SONARQUBE_URL} \
-                          -Dsonar.login=${SONARQUBE_TOKEN}
-                        '''
+                          -Dsonar.host.url=${env.SONARQUBE_URL} \
+                          -Dsonar.login=${env.SONARQUBE_AUTH_TOKEN}
+                        """
                     }
                 }
             }
+        }
+        stage('Build and Push to ECR') {
+            steps {
+                // Add your build steps here if needed (e.g., Docker build and push)
+                echo 'Build and push to ECR step.'
+            }
+        }
+    }
+    post {
+        always {
+            // Clean up any temporary files or secrets
+            sh 'rm -f vault-sonarqube-output.json'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }
