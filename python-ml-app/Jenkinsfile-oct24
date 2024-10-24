@@ -40,18 +40,23 @@ pipeline {
                 }
             }
         }
-        stage('Checkout Code') {
+        // Clone or pull the repository
+        stage('Checkout the Code') {
             steps {
-                script {
-                    // Use the GitHub credentials for cloning the repository
-                    sh """
-                        git config --global credential.helper store
-                        echo "https://${env.GITHUB_USERNAME}:${env.GITHUB_TOKEN}@github.com" > ~/.git-credentials
-                        git clone https://github.com/${env.GITHUB_USERNAME}/insurance-fraud-detection-PROD-Final.git
-                    """
-                }
-            }
+                        sh """
+                            if [ -d "insurance-fraud-detection-PROD-Final" ]; then
+                                cd insurance-fraud-detection-PROD-Final
+                                git pull
+                            else
+                                git config --global credential.helper store
+                                echo "https://${githubUsername}:${githubToken}@github.com" > ~/.git-credentials
+                                git clone https://github.com/${githubUsername}/insurance-fraud-detection-PROD-Final.git
+                            fi
+                        """
+             }
         }
+
+             
         stage('Verify SonarScanner Installation') {
             steps {
                 sh 'sonar-scanner --version'
