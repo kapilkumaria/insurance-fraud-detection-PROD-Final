@@ -26,22 +26,17 @@ pipeline {
                         def vaultOutput = readJSON file: 'vault-sonarqube-output.json'
                         def SONARQUBE_URL = vaultOutput.data.data.SONARQUBE_URL
                         def SONARQUBE_TOKEN = vaultOutput.data.data.SONARQUBE_TOKEN
-                        def ECR_REPO_WEB = vaultOutputECR.data.data.ECR_REPO_WEB
-                        def ECR_REPO_DB = vaultOutputECR.data.data.ECR_REPO_DB
+                        
 
                         echo "SonarQube URL: ${SONARQUBE_URL}"
                         echo "SonarQube token retrieved successfully."
                         
-                        echo "ECR Web Repo: ${ECR_REPO_WEB}"
-                        echo "ECR DB Repo: ${ECR_REPO_DB}"
-                        echo "ECR Repos retrieved successfully."
-
+                        
                         // Set environment variables for the SonarQube analysis
                         env.SONAR_HOST_URL = SONARQUBE_URL
                         env.SONAR_AUTH_TOKEN = SONARQUBE_TOKEN
 
-                        env.ECR_REPO_WEB = ECR_REPO_WEB
-                        env.ECR_REPO_DB = ECR_REPO_DB
+                        
                     }
                 }
             }
