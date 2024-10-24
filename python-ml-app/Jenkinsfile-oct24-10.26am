@@ -2,6 +2,9 @@ pipeline {
     agent any
     environment {
         VAULT_ADDR = 'http://44.221.215.67:8200'
+        PATH = "${PATH}:/opt/sonar-scanner/bin"
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        
     }
     stages {
         stage('Checkout Code') {
@@ -10,28 +13,20 @@ pipeline {
                     sh """
                         export VAULT_ADDR=${VAULT_ADDR}
                         export VAULT_TOKEN=\$VAULT_TOKEN
-                        vault kv get -format=json secret/github > vault-output.json
+                        vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
                     """
                     script {
-                        // Parse the JSON output for username and token
-                        def vaultOutput = readJSON file: 'vault-output.json'
-                        def githubUsername = vaultOutput.data.data.username
-                        def githubToken = vaultOutput.data.data.token
+                        // Parse the JSON output for the SonarQube URL and token
+                        def vaultOutput = readJSON file: 'vault-sonarqube-output.json'
+                        def SONARQUBE_URL = vaultOutput.data.data.SONARQUBE_URL
+                        def SONARQUBE_TOKEN = vaultOutput.data.data.SONARQUBE_TOKEN
 
-                        echo "GITHUB_USERNAME retrieved successfully"
-                        
-                        // Clone or pull the repository
-                        sh """
-                            git config --global credential.helper 'cache --timeout=3600'
-                            echo "https://${githubUsername}:${githubToken}@github.com" > ~/.git-credentials
-                            if [ -d "insurance-fraud-detection-PROD-Final" ]; then
-                                cd insurance-fraud-detection-PROD-Final
-                                git pull
-                            else
-                                git clone https://github.com/${githubUsername}/insurance-fraud-detection-PROD-Final.git
-                            fi
-                            git config --global --unset credential.helper
-                        """
+                        echo "SonarQube URL: ${SONARQUBE_URL}"
+                        echo "SonarQube token retrieved successfully."
+
+                        // Set environment variables for the SonarQube analysis
+                        env.SONAR_HOST_URL = SONARQUBE_URL
+                        env.SONAR_AUTH_TOKEN = SONARQUBE_TOKEN
                     }
                 }
             }
@@ -51,18 +46,17 @@ pipeline {
                         sonar-scanner \
                           -Dsonar.projectKey=my-python-project \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=${env.SONARQUBE_URL} \
-                          -Dsonar.login=${env.SONARQUBE_AUTH_TOKEN}
+                          -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                          -Dsonar.login=${env.SONAR_AUTH_TOKEN}
                         """
                     }
                 }
             }
         }
     }
-
     post {
         always {
-            sh 'rm -f vault-output.json'
+            sh 'rm -f vault-sonarqube-output.json'
         }
         success {
             echo 'Pipeline completed successfully!'
