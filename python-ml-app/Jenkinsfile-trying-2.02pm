@@ -150,6 +150,18 @@ pipeline {
                 }
             }
         }
+
+        stage('Update Kubernetes Manifests') {
+            steps {
+                script {
+                    sh """
+                      sed -i 's|IMAGE_PLACEHOLDER_WEB|${env.ECR_REPO_WEB}:latest|' python-ml-app-manifests/deployment-web.yaml
+                      sed -i 's|IMAGE_PLACEHOLDER_DB|${env.ECR_REPO_DB}:latest|' python-ml-app-manifests/deployment-mysql.yaml
+                    """
+                    echo 'Kubernetes manifests updated with the new image tags.'
+                }
+            }
+        }
         
 
         
