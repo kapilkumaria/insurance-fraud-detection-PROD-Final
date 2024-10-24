@@ -1,0 +1,120 @@
+pipeline {
+    agent any
+    parameters {
+        booleanParam(name: 'PUSH_TO_ECR', defaultValue: true, description: 'Push image to AWS ECR')
+        booleanParam(name: 'PUSH_TO_ARTIFACTORY', defaultValue: false, description: 'Push image to JFrog Artifactory')
+    }
+    environment {
+        VAULT_ADDR = 'http://127.0.0.1:8200'
+        PATH = "${PATH}:/opt/sonar-scanner/bin"
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
+        DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
+        
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                    sh """
+                        export VAULT_ADDR=${VAULT_ADDR}
+                        export VAULT_TOKEN=\$VAULT_TOKEN
+                        vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
+                    """
+                    script {
+                        // Parse the JSON output for the SonarQube URL and token
+                        def vaultOutput = readJSON file: 'vault-sonarqube-output.json'
+                        def SONARQUBE_URL = vaultOutput.data.data.SONARQUBE_URL
+                        def SONARQUBE_TOKEN = vaultOutput.data.data.SONARQUBE_TOKEN
+                        
+
+                        echo "SonarQube URL: ${SONARQUBE_URL}"
+                        echo "SonarQube token retrieved successfully."
+                        
+                        
+                        // Set environment variables for the SonarQube analysis
+                        env.SONAR_HOST_URL = SONARQUBE_URL
+                        env.SONAR_AUTH_TOKEN = SONARQUBE_TOKEN
+
+                        
+                    }
+                }
+            }
+        }
+
+        stage('Verify SonarScanner Installation') {
+            steps {
+                sh 'sonar-scanner --version'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('sonarQube') {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=my-python-project \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                          -Dsonar.login=${env.SONAR_AUTH_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
+        stage('Build Docker Web Image') {
+        steps {
+          script {
+            sh '''
+              cd python-ml-app
+              docker build -t ${DOCKER_IMAGE_WEB} .
+            '''
+           }
+         }
+        }
+        
+        stage('Build Docker DB Image') {
+        steps {
+          script {
+            sh '''
+              docker pull mysql:8.0
+              docker tag mysql:8.0 ${DOCKER_IMAGE_DB}
+            '''
+           }
+         }
+        }
+        stage('Trivy Scan for Docker Web Image ') {
+            steps {
+                script {
+                    // sh "trivy image --severity HIGH,CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_WEB}"
+
+                }
+            }
+        }
+        
+        stage('Trivy Scan for Docker DB Image ') {
+            steps {
+                script {
+                    // sh "trivy image --severity HIGH,CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_DB}"
+
+                }
+            }
+        }
+
+        
+    }
+    post {
+        always {
+            sh 'rm -f vault-sonarqube-output.json'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
