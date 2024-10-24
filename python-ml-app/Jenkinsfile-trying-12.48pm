@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    parameters {
+        booleanParam(name: 'PUSH_TO_ECR', defaultValue: true, description: 'Push image to AWS ECR')
+        booleanParam(name: 'PUSH_TO_ARTIFACTORY', defaultValue: false, description: 'Push image to JFrog Artifactory')
+    }
     environment {
         VAULT_ADDR = 'http://127.0.0.1:8200'
         PATH = "${PATH}:/opt/sonar-scanner/bin"
