@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+    environment {
+        VAULT_ADDR = 'http://44.221.215.67:8200'
+    }
+    stages {
+        stage('Retrieve Secrets and Checkout Code') {
+            steps {
+                withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                    sh """
+                        export VAULT_ADDR=${VAULT_ADDR}
+                        export VAULT_TOKEN=\$VAULT_TOKEN
+                        vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
+                    """
+                    script {
+                        // Parse the JSON output for SonarQube information
+                        def sonarqubeOutput = readJSON file: 'vault-sonarqube-output.json'
+                        def sonarqubeUrl = sonarqubeOutput.data.data.SONARQUBE_URL
+                        def sonarqubeToken = sonarqubeOutput.data.data.SONARQUBE_TOKEN
+
+                        // Set environment variables for the SonarQube stage
+                        env.SONARQUBE_URL = sonarqubeUrl
+                        env.SONARQUBE_AUTH_TOKEN = sonarqubeToken
+
+                        echo "Retrieved SonarQube URL: ${sonarqubeUrl}"
+                        echo "SonarQube token has been set."
+                    }
+                }
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('sonarQube') {
+                        sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=my-python-project \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${SONARQUBE_URL} \
+                          -Dsonar.login=${SONARQUBE_TOKEN}
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}
