@@ -17,19 +17,19 @@ pipeline {
             steps {
                 script {
                     vaultSecrets = [
-                        [path: 'secret/sonarqube', engineVersion: 2, secretValues: [
+                        [path: 'secret/sonarqube', engineVersion: 1, secretValues: [
                             [envVar: 'SONARQUBE_URL', vaultKey: 'SONARQUBE_URL'],
                             [envVar: 'SONARQUBE_TOKEN', vaultKey: 'SONARQUBE_TOKEN']
                         ]],
-                        [path: 'secret/ecr', engineVersion: 2, secretValues: [
+                        [path: 'secret/ecr', engineVersion: 1, secretValues: [
                             [envVar: 'ECR_REPO_WEB', vaultKey: 'ECR_REPO_WEB'],
                             [envVar: 'ECR_REPO_DB', vaultKey: 'ECR_REPO_DB']
                         ]],
-                        [path: 'secret/aws', engineVersion: 2, secretValues: [
+                        [path: 'secret/aws', engineVersion: 1, secretValues: [
                             [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'AWS_ACCESS_KEY_ID'],
                             [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'AWS_SECRET_ACCESS_KEY']
                         ]],
-                        [path: 'secret/jfrog', engineVersion: 2, secretValues: [
+                        [path: 'secret/jfrog', engineVersion: 1, secretValues: [
                             [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
                             [envVar: 'JFROG_ACCESS_TOKEN', vaultKey: 'JFROG_ACCESS_TOKEN']
                         ]]
