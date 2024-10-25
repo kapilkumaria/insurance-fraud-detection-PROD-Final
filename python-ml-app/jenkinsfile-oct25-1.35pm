@@ -27,6 +27,10 @@ pipeline {
                         [path: 'secret/aws', engineVersion: 2, secretValues: [
                             [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'AWS_ACCESS_KEY_ID'],
                             [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'AWS_SECRET_ACCESS_KEY']
+                        ]],
+                        [path: 'secret/jfrog', engineVersion: 2, secretValues: [
+                            [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
+                            [envVar: 'JFROG_ACCESS_TOKEN', vaultKey: 'JFROG_ACCESS_TOKEN']
                         ]]
                     ]
 
