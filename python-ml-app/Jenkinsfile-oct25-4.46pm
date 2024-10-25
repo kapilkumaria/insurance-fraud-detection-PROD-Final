@@ -26,8 +26,8 @@ pipeline {
            steps {
           withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://vault.kapilkumaria.com'],
             vaultSecrets: [[path: 'secret/ecr', secretValues: [
-                [vaultKey: 'ECR_REPO_DB', envVar: 'sonarurl'],
-                [vaultKey: 'SONARQUBE_TOKEN', envVar: 'sonartoken']
+                [vaultKey: 'SONARQUBE_URL', envVar: 'SONARQUBE_URL'],
+                [vaultKey: 'SONARQUBE_TOKEN', envVar: 'SONARQUBE_TOKEN']
             ]]]
         ) {
             script {
@@ -36,8 +36,8 @@ pipeline {
                     sonar-scanner \
                       -Dsonar.projectKey=my-python-project \
                       -Dsonar.sources=. \
-                      -Dsonar.host.url=${sonarurl} \
-                      -Dsonar.login=${sonartoken}
+                      -Dsonar.host.url=${SONARQUBE_URL} \
+                      -Dsonar.login=${SONARQUBE_TOKEN}
                     """
                 }
             }
