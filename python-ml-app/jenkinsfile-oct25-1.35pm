@@ -32,7 +32,12 @@ pipeline {
                             [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
                             [envVar: 'JFROG_ACCESS_TOKEN', vaultKey: 'JFROG_ACCESS_TOKEN']
                         ]]
-                    ]                    
+                    ]
+                     // Use Vault plugin to pull secrets
+                    withVault([vaultSecrets: vaultSecrets, vaultAddr: VAULT_ADDR, vaultCredentialId: 'vault-token']) {
+                        echo "Secrets retrieved successfully from Vault."
+                    }
+                }
             }
           }
         }
@@ -51,8 +56,8 @@ pipeline {
                         sonar-scanner \
                           -Dsonar.projectKey=my-python-project \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=http://sonar.kapilkumaria.com \
-                          -Dsonar.login=squ_b1e8bbbe63c3ddea000488e2b216f2bb9ad67471
+                          -Dsonar.host.url=${SONARQUBE_URL} \
+                          -Dsonar.login=${SONARQUBE_TOKEN}
                         """
                     }
                 }
