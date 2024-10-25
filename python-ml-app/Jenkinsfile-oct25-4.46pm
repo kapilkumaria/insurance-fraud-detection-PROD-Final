@@ -24,7 +24,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
            steps {
-          withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://vault.kapilkumaria.com'], vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[vaultKey: 'SONARQUBE_URL'], [envVar: ' SONARQUBE_TOKEN ', vaultKey: 'SONARQUBE_TOKEN']]]]) {
+          withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://35.175.127.253:8200/'], vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[vaultKey: 'SONARQUBE_URL'], [envVar: ' SONARQUBE_TOKEN ', vaultKey: 'SONARQUBE_TOKEN']]]]) {
             
                     
             script {
