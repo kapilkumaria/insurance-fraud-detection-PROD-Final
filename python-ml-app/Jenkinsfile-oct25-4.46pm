@@ -1,0 +1,197 @@
+pipeline {
+    agent any
+    parameters {
+        booleanParam(name: 'PUSH_TO_ECR', defaultValue: true, description: 'Push image to AWS ECR')
+        booleanParam(name: 'PUSH_TO_ARTIFACTORY', defaultValue: false, description: 'Push image to JFrog Artifactory')
+    }
+    environment {
+        
+        VAULT_ADDR = 'http://vault.kapilkumaria.com'
+        PATH = "${PATH}:/opt/sonar-scanner/bin"
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
+        DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    vaultSecrets = [
+                        [path: 'secret/sonarqube', engineVersion: 1, secretValues: [
+                            [envVar: 'SONARQUBE_URL', vaultKey: 'SONARQUBE_URL'],
+                            [envVar: 'SONARQUBE_TOKEN', vaultKey: 'SONARQUBE_TOKEN']
+                        ]],
+                        [path: 'secret/ecr', engineVersion: 1, secretValues: [
+                            [envVar: 'ECR_REPO_WEB', vaultKey: 'ECR_REPO_WEB'],
+                            [envVar: 'ECR_REPO_DB', vaultKey: 'ECR_REPO_DB']
+                        ]],
+                        [path: 'secret/aws', engineVersion: 1, secretValues: [
+                            [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'AWS_ACCESS_KEY_ID'],
+                            [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'AWS_SECRET_ACCESS_KEY']
+                        ]],
+                        [path: 'secret/jfrog', engineVersion: 1, secretValues: [
+                            [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
+                            [envVar: 'JFROG_ACCESS_TOKEN', vaultKey: 'JFROG_ACCESS_TOKEN']
+                        ]]
+                    ]
+                     // Use Vault plugin to pull secrets
+                    withVault([vaultSecrets: vaultSecrets]) {
+                        sh 'vault kv get -address=http://vault.kapilkumaria.com secret/sonarqube'
+                        echo "Secrets retrieved successfully from Vault."
+                    }
+                }
+            }
+        }
+        
+
+        stage('Verify SonarScanner Installation') {
+            steps {
+                sh 'sonar-scanner --version'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('sonarQube') {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=my-python-project \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${SONARQUBE_URL} \
+                          -Dsonar.login=${SONARQUBE_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Web Image') {
+            steps {
+                sh '''
+                  cd python-ml-app
+                  docker build -t ${DOCKER_IMAGE_WEB} .
+                '''
+            }
+        }
+
+        stage('Build Docker DB Image') {
+            steps {
+                sh '''
+                  docker pull mysql:8.0
+                  docker tag mysql:8.0 ${DOCKER_IMAGE_DB}
+                '''
+            }
+        }
+
+        stage('Trivy Scan for Docker Web Image') {
+            steps {
+                sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_WEB}"
+            }
+        }
+
+        stage('Trivy Scan for Docker DB Image') {
+            steps {
+                sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_DB}"
+            }
+        }
+
+        stage('Push Web Image to AWS ECR') {
+            when {
+                expression { params.PUSH_TO_ECR }
+            }
+            steps {
+                withEnv(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) {
+                    sh """
+                      aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
+                      docker tag ${DOCKER_IMAGE_WEB}:latest ${ECR_REPO_WEB}:latest
+                      docker push ${ECR_REPO_WEB}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Push DB Image to AWS ECR') {
+            when {
+                expression { params.PUSH_TO_ECR }
+            }
+            steps {
+                withEnv(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) {
+                    sh """
+                      aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
+                      docker tag ${DOCKER_IMAGE_DB}:latest ${ECR_REPO_DB}:latest
+                      docker push ${ECR_REPO_DB}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Push Web Image to JFrog Artifactory') {
+            when {
+                expression { params.PUSH_TO_ARTIFACTORY }
+            }
+            steps {
+                withEnv(['JFROG_URL', 'JFROG_ACCESS_TOKEN']) {
+                    sh """
+                      docker login ${JFROG_URL} --username ${JFROG_ACCESS_TOKEN} --password ${JFROG_ACCESS_TOKEN}
+                      docker tag ${DOCKER_IMAGE_WEB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_WEB}:latest
+                      docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_WEB}:latest
+                    """
+                    echo "Web image pushed to JFrog Artifactory successfully."
+                }
+            }
+        }
+
+        stage('Push DB Image to JFrog Artifactory') {
+            when {
+                expression { params.PUSH_TO_ARTIFACTORY }
+            }
+            steps {
+                withEnv(['JFROG_URL', 'JFROG_ACCESS_TOKEN']) {
+                    sh """
+                      docker login ${JFROG_URL} --username ${JFROG_ACCESS_TOKEN} --password ${JFROG_ACCESS_TOKEN}
+                      docker tag ${DOCKER_IMAGE_DB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
+                      docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
+                    """
+                    echo "DB image pushed to JFrog Artifactory successfully."
+                }
+            }
+        }
+
+        stage('Update Kubernetes Manifests') {
+            steps {
+                sh """
+                  sed -i 's|IMAGE_PLACEHOLDER_WEB|${ECR_REPO_WEB}:latest|' python-ml-app-manifests/deployment-web.yaml
+                  sed -i 's|IMAGE_PLACEHOLDER_DB|${ECR_REPO_DB}:latest|' python-ml-app-manifests/deployment-mysql.yaml
+                """
+                echo 'Kubernetes manifests updated with the new image tags.'
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                withEnv(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) {
+                    sh """
+                      aws eks update-kubeconfig --region us-east-1 --name kk-oct24-cluster
+                      kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
+                      kubectl apply -f python-ml-app-manifests/service-mysql.yaml
+                      kubectl apply -f python-ml-app-manifests/deployment-web.yaml
+                      kubectl apply -f python-ml-app-manifests/service-web.yaml
+                    """
+                    echo 'Application deployed to EKS successfully.'
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
