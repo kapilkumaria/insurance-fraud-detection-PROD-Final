@@ -32,14 +32,9 @@ pipeline {
                             [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
                             [envVar: 'JFROG_ACCESS_TOKEN', vaultKey: 'JFROG_ACCESS_TOKEN']
                         ]]
-                    ]
-
-                    // Use Vault plugin to pull secrets
-                    withVault([vaultSecrets: vaultSecrets, vaultAddr: VAULT_ADDR, vaultCredentialId: 'vault-token']) {
-                        echo "Secrets retrieved successfully from Vault."
-                    }
-                }
+                    ]                    
             }
+          }
         }
 
         stage('Verify SonarScanner Installation') {
