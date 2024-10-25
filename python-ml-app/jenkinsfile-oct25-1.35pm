@@ -39,8 +39,8 @@ pipeline {
                     }
                 }
             }
-          }
         }
+        
 
         stage('Verify SonarScanner Installation') {
             steps {
