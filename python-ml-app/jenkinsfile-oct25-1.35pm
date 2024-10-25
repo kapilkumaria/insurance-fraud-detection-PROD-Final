@@ -35,7 +35,7 @@ pipeline {
                         ]]
                     ]
                      // Use Vault plugin to pull secrets
-                    withVault([vaultSecrets: vaultSecrets, vaultAddr: VAULT_ADDR, vaultCredentialId: 'vault-token']) {
+                    withVault([vaultSecrets: vaultSecrets]) {
                         sh 'vault kv get -address=http://vault.kapilkumaria.com secret/sonarqube'
                         echo "Secrets retrieved successfully from Vault."
                     }
