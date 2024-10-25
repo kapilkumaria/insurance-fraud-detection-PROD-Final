@@ -26,7 +26,7 @@ pipeline {
            steps {
           withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://vault.kapilkumaria.com'],
             vaultSecrets: [[path: 'secret/sonarqube', secretValues: [
-                [vaultKey: 'SONARQUBE_URL', envVar: 'sonarurl'],
+                [vaultKey: 'ECR_REPO_DB', envVar: 'sonarurl'],
                 [vaultKey: 'SONARQUBE_TOKEN', envVar: 'sonartoken']
             ]]]
         ) {
