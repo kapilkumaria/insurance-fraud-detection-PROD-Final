@@ -13,36 +13,8 @@ pipeline {
         DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
     }
     stages {
-        stage('Checkout Code') {
-            steps {
-                script {
-                    vaultSecrets = [
-                        [path: 'secret/sonarqube', engineVersion: 1, secretValues: [
-                            [envVar: 'SONARQUBE_URL', vaultKey: 'SONARQUBE_URL'],
-                            [envVar: 'SONARQUBE_TOKEN', vaultKey: 'SONARQUBE_TOKEN']
-                        ]],
-                        [path: 'secret/ecr', engineVersion: 1, secretValues: [
-                            [envVar: 'ECR_REPO_WEB', vaultKey: 'ECR_REPO_WEB'],
-                            [envVar: 'ECR_REPO_DB', vaultKey: 'ECR_REPO_DB']
-                        ]],
-                        [path: 'secret/aws', engineVersion: 1, secretValues: [
-                            [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'AWS_ACCESS_KEY_ID'],
-                            [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'AWS_SECRET_ACCESS_KEY']
-                        ]],
-                        [path: 'secret/jfrog', engineVersion: 1, secretValues: [
-                            [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
-                            [envVar: 'JFROG_ACCESS_TOKEN', vaultKey: 'JFROG_ACCESS_TOKEN']
-                        ]]
-                    ]
-                     // Use Vault plugin to pull secrets
-                    withVault([vaultSecrets: vaultSecrets]) {
-                        sh 'vault kv get -address=http://vault.kapilkumaria.com secret/sonarqube'
-                        echo "Secrets retrieved successfully from Vault."
-                    }
-                }
-            }
-        }
-        
+                             
+             
 
         stage('Verify SonarScanner Installation') {
             steps {
@@ -52,19 +24,24 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
+                withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://vault.kapilkumaria.com']) {
+                      vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[vaultKey: 'SONARQUBE_URL', envVar: 'sonarurl'], [vaultKey: 'SONARQUBE_TOKEN', envVar: 'sonartoken']]]]) {               
+                
                 script {
                     withSonarQubeEnv('sonarQube') {
                         sh """
                         sonar-scanner \
                           -Dsonar.projectKey=my-python-project \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=${SONARQUBE_URL} \
-                          -Dsonar.login=${SONARQUBE_TOKEN}
+                          -Dsonar.host.url=${sonarurl} \
+                          -Dsonar.login=${sonartoken}
                         """
                     }
                 }
             }
-        }
+           }
+         }
+        
 
         stage('Build Docker Web Image') {
             steps {
