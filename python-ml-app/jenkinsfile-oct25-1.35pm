@@ -10,46 +10,30 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
         DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
-        
     }
     stages {
         stage('Checkout Code') {
             steps {
-                withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
-                    sh """
-                        export VAULT_ADDR=${VAULT_ADDR}
-                        export VAULT_TOKEN=\$VAULT_TOKEN
-                        vault kv get -format=json secret/sonarqube > vault-sonarqube-output.json
-                        vault kv get -format=json secret/ecr > vault-ecr-output.json
-                        vault kv get -format=json secret/aws > vault-aws-output.json
-                    """
-                    script {
-                        // Parse the JSON output for the SonarQube URL and token
-                        def vaultSonarOutput = readJSON file: 'vault-sonarqube-output.json'
-                        def vaultEcrOutput = readJSON file: 'vault-ecr-output.json'
-                        def vaultAwsOutput = readJSON file: 'vault-aws-output.json'
+                script {
+                    vaultSecrets = [
+                        [path: 'secret/sonarqube', engineVersion: 2, secretValues: [
+                            [envVar: 'SONARQUBE_URL', vaultKey: 'SONARQUBE_URL'],
+                            [envVar: 'SONARQUBE_TOKEN', vaultKey: 'SONARQUBE_TOKEN']
+                        ]],
+                        [path: 'secret/ecr', engineVersion: 2, secretValues: [
+                            [envVar: 'ECR_REPO_WEB', vaultKey: 'ECR_REPO_WEB'],
+                            [envVar: 'ECR_REPO_DB', vaultKey: 'ECR_REPO_DB']
+                        ]],
+                        [path: 'secret/aws', engineVersion: 2, secretValues: [
+                            [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'AWS_ACCESS_KEY_ID'],
+                            [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'AWS_SECRET_ACCESS_KEY']
+                        ]]
+                    ]
 
-                        def SONARQUBE_URL = vaultSonarOutput.data.data.SONARQUBE_URL
-                        def SONARQUBE_TOKEN = vaultSonarOutput.data.data.SONARQUBE_TOKEN
-                        def ECR_REPO_WEB = vaultEcrOutput.data.data.ECR_REPO_WEB
-                        def ECR_REPO_DB = vaultEcrOutput.data.data.ECR_REPO_DB
-                        def AWS_ACCESS_KEY_ID = vaultAwsOutput.data.data.AWS_ACCESS_KEY_ID
-                        def AWS_SECRET_ACCESS_KEY = vaultAwsOutput.data.data.AWS_SECRET_ACCESS_KEY
-                        
-
+                    // Use Vault plugin to pull secrets
+                    withVault([vaultSecrets: vaultSecrets, vaultAddr: VAULT_ADDR, vaultCredentialId: 'vault-token']) {
                         echo "SonarQube URL: ${SONARQUBE_URL}"
                         echo "SonarQube token retrieved successfully."
-                        
-                        
-                        // Set environment variables for the SonarQube analysis and AWS credentials
-                        env.SONAR_HOST_URL = SONARQUBE_URL
-                        env.SONAR_AUTH_TOKEN = SONARQUBE_TOKEN
-                        env.ECR_REPO_WEB = ECR_REPO_WEB
-                        env.ECR_REPO_DB = ECR_REPO_DB
-                        env.AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
-                        env.AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
-
-                        
                     }
                 }
             }
@@ -69,51 +53,41 @@ pipeline {
                         sonar-scanner \
                           -Dsonar.projectKey=my-python-project \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                          -Dsonar.login=${env.SONAR_AUTH_TOKEN}
+                          -Dsonar.host.url=${SONARQUBE_URL} \
+                          -Dsonar.login=${SONARQUBE_TOKEN}
                         """
                     }
                 }
             }
         }
-        stage('Build Docker Web Image') {
-        steps {
-          script {
-            sh '''
-              cd python-ml-app
-              docker build -t ${DOCKER_IMAGE_WEB} .
-            '''
-           }
-         }
-        }
-        
-        stage('Build Docker DB Image') {
-        steps {
-          script {
-            sh '''
-              docker pull mysql:8.0
-              docker tag mysql:8.0 ${DOCKER_IMAGE_DB}
-            '''
-           }
-         }
-        }
-        stage('Trivy Scan for Docker Web Image ') {
-            steps {
-                script {
-                    // sh "trivy image --severity HIGH,CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
-                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_WEB}"
 
-                }
+        stage('Build Docker Web Image') {
+            steps {
+                sh '''
+                  cd python-ml-app
+                  docker build -t ${DOCKER_IMAGE_WEB} .
+                '''
             }
         }
-        
-        stage('Trivy Scan for Docker DB Image ') {
-            steps {
-                script {
-                    // sh "trivy image --severity HIGH,CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
-                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_DB}"
 
-                }
+        stage('Build Docker DB Image') {
+            steps {
+                sh '''
+                  docker pull mysql:8.0
+                  docker tag mysql:8.0 ${DOCKER_IMAGE_DB}
+                '''
+            }
+        }
+
+        stage('Trivy Scan for Docker Web Image') {
+            steps {
+                sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_WEB}"
+            }
+        }
+
+        stage('Trivy Scan for Docker DB Image') {
+            steps {
+                sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --scanners vuln ${DOCKER_IMAGE_DB}"
             }
         }
 
@@ -122,15 +96,13 @@ pipeline {
                 expression { params.PUSH_TO_ECR }
             }
             steps {
-                script {
-                    sh """
-                      export AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}
-                      export AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}
-                      aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
-                      docker tag ${DOCKER_IMAGE_WEB}:latest ${env.ECR_REPO_WEB}:latest
-                      docker push ${env.ECR_REPO_WEB}:latest
-                    """
-                }
+                sh """
+                  export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                  export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                  aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
+                  docker tag ${DOCKER_IMAGE_WEB}:latest ${ECR_REPO_WEB}:latest
+                  docker push ${ECR_REPO_WEB}:latest
+                """
             }
         }
 
@@ -139,50 +111,44 @@ pipeline {
                 expression { params.PUSH_TO_ECR }
             }
             steps {
-                script {
-                    sh """
-                      export AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}
-                      export AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}
-                      aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
-                      docker tag ${DOCKER_IMAGE_DB}:latest ${env.ECR_REPO_DB}:latest
-                      docker push ${env.ECR_REPO_DB}:latest
-                    """
-                }
+                sh """
+                  export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                  export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                  aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
+                  docker tag ${DOCKER_IMAGE_DB}:latest ${ECR_REPO_DB}:latest
+                  docker push ${ECR_REPO_DB}:latest
+                """
             }
         }
 
         stage('Update Kubernetes Manifests') {
             steps {
-                script {
-                    sh """
-                      sed -i 's|IMAGE_PLACEHOLDER_WEB|${env.ECR_REPO_WEB}:latest|' python-ml-app-manifests/deployment-web.yaml
-                      sed -i 's|IMAGE_PLACEHOLDER_DB|${env.ECR_REPO_DB}:latest|' python-ml-app-manifests/deployment-mysql.yaml
-                    """
-                    echo 'Kubernetes manifests updated with the new image tags.'
-                }
+                sh """
+                  sed -i 's|IMAGE_PLACEHOLDER_WEB|${ECR_REPO_WEB}:latest|' python-ml-app-manifests/deployment-web.yaml
+                  sed -i 's|IMAGE_PLACEHOLDER_DB|${ECR_REPO_DB}:latest|' python-ml-app-manifests/deployment-mysql.yaml
+                """
+                echo 'Kubernetes manifests updated with the new image tags.'
             }
         }
 
         stage('Deploy to EKS') {
             steps {
-                script {
-                    sh """
-                      export AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}
-                      export AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}
-                      aws eks update-kubeconfig --region us-east-1 --name kk-oct24-cluster
-                      kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
-                      kubectl apply -f python-ml-app-manifests/service-mysql.yaml
-                      kubectl apply -f python-ml-app-manifests/deployment-web.yaml
-                      kubectl apply -f python-ml-app-manifests/service-web.yaml
-                    """
-                    echo 'Application deployed to EKS successfully.'
-                }
+                sh """
+                  export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                  export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                  aws eks update-kubeconfig --region us-east-1 --name kk-oct24-cluster
+                  kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
+                  kubectl apply -f python-ml-app-manifests/service-mysql.yaml
+                  kubectl apply -f python-ml-app-manifests/deployment-web.yaml
+                  kubectl apply -f python-ml-app-manifests/service-web.yaml
+                """
+                echo 'Application deployed to EKS successfully.'
             }
-        }   
+        }
     }
     post {
         always {
-            sh 'rm -f vault-sonarqube-output.json'
+            cleanWs()
         }
         success {
             echo 'Pipeline completed successfully!'
