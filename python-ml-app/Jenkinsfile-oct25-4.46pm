@@ -23,24 +23,28 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://vault.kapilkumaria.com']) {
-                      vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[vaultKey: 'SONARQUBE_URL', envVar: 'sonarurl'], [vaultKey: 'SONARQUBE_TOKEN', envVar: 'sonartoken']]]]) {               
-                
-                script {
-                    withSonarQubeEnv('sonarQube') {
-                        sh """
-                        sonar-scanner \
-                          -Dsonar.projectKey=my-python-project \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=${sonarurl} \
-                          -Dsonar.login=${sonartoken}
-                        """
-                    }
+           steps {
+          withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://vault.kapilkumaria.com'],
+            vaultSecrets: [[path: 'secret/sonarqube', secretValues: [
+                [vaultKey: 'SONARQUBE_URL', envVar: 'sonarurl'],
+                [vaultKey: 'SONARQUBE_TOKEN', envVar: 'sonartoken']
+            ]]]
+        ) {
+            script {
+                withSonarQubeEnv('sonarQube') {
+                    sh """
+                    sonar-scanner \
+                      -Dsonar.projectKey=my-python-project \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=${sonarurl} \
+                      -Dsonar.login=${sonartoken}
+                    """
                 }
             }
-           }
-         }
+        }
+    }
+}
+
         
 
         stage('Build Docker Web Image') {
