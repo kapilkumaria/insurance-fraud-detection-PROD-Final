@@ -51,8 +51,8 @@ pipeline {
                         sonar-scanner \
                           -Dsonar.projectKey=my-python-project \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=${SONARQUBE_URL} \
-                          -Dsonar.login=${SONARQUBE_TOKEN}
+                          -Dsonar.host.url=http://sonar.kapilkumaria.com \
+                          -Dsonar.login=squ_b1e8bbbe63c3ddea000488e2b216f2bb9ad67471
                         """
                     }
                 }
