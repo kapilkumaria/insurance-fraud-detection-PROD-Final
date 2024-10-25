@@ -5,6 +5,7 @@ pipeline {
         booleanParam(name: 'PUSH_TO_ARTIFACTORY', defaultValue: false, description: 'Push image to JFrog Artifactory')
     }
     environment {
+        
         VAULT_ADDR = 'http://vault.kapilkumaria.com'
         PATH = "${PATH}:/opt/sonar-scanner/bin"
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
