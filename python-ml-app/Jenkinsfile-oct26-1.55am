@@ -182,8 +182,8 @@ stage('Push DB Image to JFrog Artifactory') {
         stage('Update Kubernetes Manifests') {
             steps {
                 sh """
-                  sed -i 's|IMAGE_PLACEHOLDER_WEB|${ECR_REPO_WEB}:latest|' python-ml-app-manifests/deployment-web.yaml
-                  sed -i 's|IMAGE_PLACEHOLDER_DB|${ECR_REPO_DB}:latest|' python-ml-app-manifests/deployment-mysql.yaml
+                  sed -i 's|IMAGE_PLACEHOLDER_WEB|${ECR_REPO_WEB}:${BUILD_NUMBER}|' python-ml-app-manifests/deployment-web.yaml
+                  sed -i 's|IMAGE_PLACEHOLDER_DB|${ECR_REPO_DB}:${BUILD_NUMBER}|' python-ml-app-manifests/deployment-mysql.yaml
                 """
                 echo 'Kubernetes manifests updated with the new image tags.'
             }
