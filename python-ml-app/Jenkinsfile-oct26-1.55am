@@ -181,17 +181,36 @@ stage('Push DB Image to JFrog Artifactory') {
 
         stage('Update Kubernetes Manifests') {
             steps {
+                withVault(vaultSecrets: [
+                    [path: 'secret/aws', secretValues: [
+                        [vaultKey: 'AWS_ACCESS_KEY_ID', envVar: 'AWS_ACCESS_KEY_ID'],
+                        [vaultKey: 'AWS_SECRET_ACCESS_KEY', envVar: 'AWS_SECRET_ACCESS_KEY']
+                    ]],
+                    [path: 'secret/ecr', secretValues: [
+                        [vaultKey: 'ECR_REPO_WEB', envVar: 'ECR_REPO_WEB']
+                    ]]
+                ]) {
+
                 sh """
                   sed -i 's|IMAGE_PLACEHOLDER_WEB|${ECR_REPO_WEB}:${BUILD_NUMBER}|' python-ml-app-manifests/deployment-web.yaml
                   sed -i 's|IMAGE_PLACEHOLDER_DB|${ECR_REPO_DB}:${BUILD_NUMBER}|' python-ml-app-manifests/deployment-mysql.yaml
                 """
                 echo 'Kubernetes manifests updated with the new image tags.'
             }
+          }
         }
 
         stage('Deploy to EKS') {
-            steps {
-                withEnv(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) {
+             steps {
+                withVault(vaultSecrets: [
+                    [path: 'secret/aws', secretValues: [
+                        [vaultKey: 'AWS_ACCESS_KEY_ID', envVar: 'AWS_ACCESS_KEY_ID'],
+                        [vaultKey: 'AWS_SECRET_ACCESS_KEY', envVar: 'AWS_SECRET_ACCESS_KEY']
+                    ]],
+                    [path: 'secret/ecr', secretValues: [
+                        [vaultKey: 'ECR_REPO_WEB', envVar: 'ECR_REPO_WEB']
+                    ]]
+                ]) {
                     sh """
                       aws eks update-kubeconfig --region us-east-1 --name kk-oct24-cluster
                       kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
