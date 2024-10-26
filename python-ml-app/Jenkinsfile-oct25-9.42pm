@@ -163,23 +163,7 @@ pipeline {
                 }
             }
         }
-
-        stage('Upload to Artifactory') {
-        when {
-        expression { params.PUSH_TO_ARTIFACTORY }
-        }
-            steps {
-                script {
-                    // Configure JFrog CLI with credentials fetched from Vault
-                    sh """
-                       jfrog config rm artifactory-server-kk --quiet || true
-                       jfrog config add artifactory-server-kk --artifactory-url=${JFROG_URL} --access-token=${JFROG_TOKEN} --interactive=false
-                    """
-
-                }
-            }
-        }
-    
+         
 
 
         stage('Push DB Image to JFrog Artifactory') {
@@ -187,15 +171,16 @@ pipeline {
                 expression { params.PUSH_TO_ARTIFACTORY }
             }
             steps {
-                withEnv(['JFROG_URL', 'JFROG_ACCESS_TOKEN']) {
+               
                     sh """
-                      docker login ${JFROG_URL} --username ${JFROG_ACCESS_TOKEN} --password ${JFROG_ACCESS_TOKEN}
+                      docker login ${JFROG_URL} --username ${JFROG_TOKEN} --password ${JFROG_TOKEN}
                       docker tag ${DOCKER_IMAGE_DB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
                       docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
                     """
                     echo "DB image pushed to JFrog Artifactory successfully."
-                }
             }
+                
+            
         }
 
         stage('Update Kubernetes Manifests') {
