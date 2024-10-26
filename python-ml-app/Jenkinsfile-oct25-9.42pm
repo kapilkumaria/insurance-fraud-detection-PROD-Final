@@ -97,8 +97,8 @@ pipeline {
             // Using env variables directly without interpolation to avoid Groovy string interpolation issues
             sh '''
               aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
-              docker tag "$DOCKER_IMAGE_WEB:latest" "$ECR_REPO_WEB:latest"
-              docker push "$ECR_REPO_WEB:latest"
+              docker tag "$DOCKER_IMAGE_WEB:latest" "$ECR_REPO_WEB:$BUILD_NUMBER"
+              docker push "$ECR_REPO_WEB:$BUILD_NUMBER"
             '''
         }
     }
@@ -132,8 +132,8 @@ pipeline {
               echo "DOCKER_IMAGE_DB value is: $DOCKER_IMAGE_DB"
               
               aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
-              docker tag "$DOCKER_IMAGE_DB:latest" "$ECR_REPO_DB:latest"
-              docker push "$ECR_REPO_DB:latest"
+              docker tag "$DOCKER_IMAGE_DB:latest" "$ECR_REPO_DB:$BUILD_NUMBER"
+              docker push "$ECR_REPO_DB:$BUILD_NUMBER"
             '''
         }
     }
