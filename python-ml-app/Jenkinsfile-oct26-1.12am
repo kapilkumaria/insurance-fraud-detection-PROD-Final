@@ -126,9 +126,9 @@ pipeline {
                     ]]
                 ]) {
                     echo "Fetched JFrog credentials from Vault"
-                    echo $JFROG_USERNAME
-                    echo $JFROG_TOKEN
-                    echo $JFROG_URL
+                    echo "$JFROG_USERNAME"
+                    echo "$JFROG_TOKEN"
+                    echo "$JFROG_URL"
                 }
             }
         }
