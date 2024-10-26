@@ -120,10 +120,15 @@ pipeline {
                 withVault(vaultSecrets: [
                     [path: 'secret/jfrog', secretValues: [
                         [vaultKey: 'JFROG_URL', envVar: 'JFROG_URL'],
-                        [vaultKey: 'JFROG_TOKEN', envVar: 'JFROG_TOKEN']
+                        [vaultKey: 'JFROG_TOKEN', envVar: 'JFROG_TOKEN'],
+                        [vaultKey: 'JFROG_USERNAME', envVar: 'JFROG_USERNAME']
+                        
                     ]]
                 ]) {
                     echo "Fetched JFrog credentials from Vault"
+                    echo $JFROG_USERNAME
+                    echo $JFROG_TOKEN
+                    echo $JFROG_URL
                 }
             }
         }
@@ -134,7 +139,8 @@ pipeline {
             }
             steps {
                 sh """
-                  docker login ${JFROG_URL} --username ${JFROG_TOKEN} --password ${JFROG_TOKEN}
+                  docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
+                  
                   docker tag ${DOCKER_IMAGE_DB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
                   docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
                 """
