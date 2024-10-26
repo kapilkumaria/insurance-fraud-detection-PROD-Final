@@ -81,6 +81,8 @@ pipeline {
                     ]]
                 ]) {
                     sh '''
+                      echo "ECR_REPO_WEB: ${env.ECR_REPO_WEB}"
+                      echo "ECR_REPO_DB: ${env.ECR_REPO_DB}"
                       aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
                       docker tag ${DOCKER_IMAGE_WEB}:latest ${ECR_REPO_WEB}:${BUILD_NUMBER}
                       docker push ${ECR_REPO_WEB}:${BUILD_NUMBER}
@@ -104,6 +106,8 @@ pipeline {
                     ]]
                 ]) {
                     sh '''
+                      echo "ECR_REPO_WEB: ${env.ECR_REPO_WEB}"
+                      echo "ECR_REPO_DB: ${env.ECR_REPO_DB}"
                       aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
                       docker tag ${DOCKER_IMAGE_DB}:latest ${ECR_REPO_DB}:${BUILD_NUMBER}
                       docker push ${ECR_REPO_DB}:${BUILD_NUMBER}
