@@ -154,6 +154,8 @@ pipeline {
                     ]
                 ]) {
                     // Secrets are now available in the environment
+                    echo "JFROG_URL: ${env.JFROG_URL}"
+                    echo "JFROG_TOKEN: ${env.JFROG_TOKEN}"
                     echo 'Fetched JFrog credentials from Vault'
                 }
             }
@@ -164,9 +166,9 @@ pipeline {
                 script {
                     // Configure JFrog CLI with credentials fetched from Vault
                     sh """
-    jfrog config rm artifactory-server-kk --quiet || true
-    jfrog config add artifactory-server-kk --artifactory-url=${JFROG_URL} --access-token=${JFROG_TOKEN} --interactive=false
-"""
+                       jfrog config rm artifactory-server-kk --quiet || true
+                       jfrog config add artifactory-server-kk --artifactory-url=${JFROG_URL} --access-token=${JFROG_TOKEN} --interactive=false
+                    """
 
                 }
             }
