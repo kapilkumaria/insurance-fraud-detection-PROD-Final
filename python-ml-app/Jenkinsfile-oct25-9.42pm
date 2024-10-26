@@ -127,14 +127,10 @@ pipeline {
                 ]]
             ]
         ) {        
-            // Using env variables directly without interpolation to avoid Groovy string interpolation issues
             sh '''
-              echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-              echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
-              echo "ECR_REPO_DB: $ECR_REPO_DB"
-              echo "DOCKER_IMAGE_DB: $DOCKER_IMAGE_DB"
               echo "ECR_REPO_DB value is: $ECR_REPO_DB"
               echo "DOCKER_IMAGE_DB value is: $DOCKER_IMAGE_DB"
+              
               aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
               docker tag "$DOCKER_IMAGE_DB:latest" "$ECR_REPO_DB:latest"
               docker push "$ECR_REPO_DB:latest"
@@ -142,6 +138,7 @@ pipeline {
         }
     }
 }
+
 
         stage('Push Web Image to JFrog Artifactory') {
             when {
