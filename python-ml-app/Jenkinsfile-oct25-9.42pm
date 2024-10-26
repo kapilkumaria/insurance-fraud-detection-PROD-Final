@@ -139,11 +139,12 @@ pipeline {
         }
     }
 }
-        stage('Checking jfrog url') {
+        stage('Checking jfrog url') 
+        {
            withCredentials([string(credentialsId: 'JFROG_URL', variable: 'JFROG_URL')]) {
                    echo "JFROG URL: ${JFROG_URL}"
                    // Continue with your JFrog Artifactory steps
-          }
+            }
         }
 
 
