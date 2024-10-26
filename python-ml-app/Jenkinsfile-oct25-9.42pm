@@ -12,6 +12,7 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         DOCKER_IMAGE_WEB = 'insurance-fraud-detection-web'
         DOCKER_IMAGE_DB = 'insurance-fraud-detection-db'
+        JFROG_URL = 'https://vault.kapilkumaria.com'
     }
     stages {
                              
@@ -163,6 +164,14 @@ pipeline {
                 }
             }
         }
+
+        stage('Checking jfrog url') {
+           withCredentials([string(credentialsId: 'JFROG_URL', variable: 'JFROG_URL')]) {
+                   echo "JFROG URL: ${JFROG_URL}"
+                   // Continue with your JFrog Artifactory steps
+          }
+        }
+
          
 
 
