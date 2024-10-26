@@ -113,40 +113,45 @@ pipeline {
         }
 
         stage('Fetch JFrog Credentials') {
-            when {
-                expression { params.PUSH_TO_ARTIFACTORY }
-            }
-            steps {
-                withVault(vaultSecrets: [
-                    [path: 'secret/jfrog', secretValues: [
-                        [vaultKey: 'JFROG_URL', envVar: 'JFROG_URL'],
-                        [vaultKey: 'JFROG_TOKEN', envVar: 'JFROG_TOKEN'],
-                        [vaultKey: 'JFROG_USERNAME', envVar: 'JFROG_USERNAME']
-                        
-                    ]]
-                ]) {
-                    echo "Fetched JFrog credentials from Vault"
-                    echo "$JFROG_USERNAME"
-                    echo "$JFROG_TOKEN"
-                    echo "$JFROG_URL"
-                }
+    when {
+        expression { params.PUSH_TO_ARTIFACTORY }
+    }
+    steps {
+        script {
+            withVault(vaultSecrets: [
+                [path: 'secret/jfrog', secretValues: [
+                    [vaultKey: 'JFROG_URL', envVar: 'JFROG_URL'],
+                    [vaultKey: 'JFROG_TOKEN', envVar: 'JFROG_TOKEN'],
+                    [vaultKey: 'JFROG_USERNAME', envVar: 'JFROG_USERNAME']
+                ]]
+            ]) {
+                echo "Fetched JFrog credentials from Vault"
+                echo "JFROG_USERNAME: ${JFROG_USERNAME}"
+                echo "JFROG_TOKEN: ${JFROG_TOKEN}"
+                echo "JFROG_URL: ${JFROG_URL}"
+                
+                // Make credentials available to the entire pipeline
+                env.JFROG_URL = JFROG_URL
+                env.JFROG_USERNAME = JFROG_USERNAME
+                env.JFROG_TOKEN = JFROG_TOKEN
             }
         }
+    }
+}
 
-        stage('Push DB Image to JFrog Artifactory') {
-            when {
-                expression { params.PUSH_TO_ARTIFACTORY }
-            }
-            steps {
-                sh """
-                  docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
-                  
-                  docker tag ${DOCKER_IMAGE_DB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
-                  docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
-                """
-                echo "DB image pushed to JFrog Artifactory successfully."
-            }
-        }
+stage('Push DB Image to JFrog Artifactory') {
+    when {
+        expression { params.PUSH_TO_ARTIFACTORY }
+    }
+    steps {
+        sh """
+          docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
+          docker tag ${DOCKER_IMAGE_DB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
+          docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_DB}:latest
+        """
+        echo "DB image pushed to JFrog Artifactory successfully."
+    }
+}
 
         stage('Update Kubernetes Manifests') {
             steps {
