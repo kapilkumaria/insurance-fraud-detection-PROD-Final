@@ -139,6 +139,27 @@ pipeline {
     }
 }
 
+stage('Push Web Image to JFrog Artifactory') {
+    when {
+        expression { params.PUSH_TO_ARTIFACTORY }
+    }
+    steps {
+        // Removing 'http://' or 'https://' from the URL for Docker tagging
+        script {
+            def jfrogUrlWithoutProtocol = JFROG_URL.replaceAll('^https?://', '')
+            sh """
+              docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
+              
+              docker tag ${DOCKER_IMAGE_WEB}:latest ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_WEB}:latest
+              docker push ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_WEB}:latest
+            """
+        }
+        echo "Web image pushed to JFrog Artifactory successfully."
+    }
+}
+
+
+
 stage('Push DB Image to JFrog Artifactory') {
     when {
         expression { params.PUSH_TO_ARTIFACTORY }
