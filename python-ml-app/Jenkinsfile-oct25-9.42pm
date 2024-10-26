@@ -138,23 +138,55 @@ pipeline {
         }
     }
 }
+        stage('Fetch JFrog Credentials') {
+    steps {
+        // Fetch secrets from HashiCorp Vault
+        withVault([
+            vaultSecrets: [
+                [path: 'secret/jfrog', secretValues: [
+                    [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
+                    [envVar: 'JFROG_TOKEN', vaultKey: 'JFROG_TOKEN']
+                ]]
+            ]
+        ]) {
+            echo 'Fetched JFrog credentials from Vault'
+        }
+    }
+}
 
 
-        stage('Push Web Image to JFrog Artifactory') {
-            when {
-                expression { params.PUSH_TO_ARTIFACTORY }
-            }
+        stage('Fetch JFrog Credentials') {
             steps {
-                withEnv(['JFROG_URL', 'JFROG_ACCESS_TOKEN']) {
-                    sh """
-                      docker login ${JFROG_URL} --username ${JFROG_ACCESS_TOKEN} --password ${JFROG_ACCESS_TOKEN}
-                      docker tag ${DOCKER_IMAGE_WEB}:latest ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_WEB}:latest
-                      docker push ${JFROG_URL}/my-docker-repo/${DOCKER_IMAGE_WEB}:latest
-                    """
-                    echo "Web image pushed to JFrog Artifactory successfully."
+                // Fetch secrets from HashiCorp Vault
+                withVault([
+                    vaultSecrets: [
+                        [path: 'secret/jfrog', secretValues: [
+                            [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
+                            [envVar: 'JFROG_TOKEN', vaultKey: 'JFROG_TOKEN']
+                            
+                        ]]
+                    ]
+                ]) {
+                    // Secrets are now available in the environment
+                    echo 'Fetched JFrog credentials from Vault'
                 }
             }
         }
+
+        stage('Upload to Artifactory') {
+            steps {
+                script {
+                    // Configure JFrog CLI with credentials fetched from Vault
+                    sh """
+    jfrog config rm artifactory-server-kk --quiet || true
+    jfrog config add artifactory-server-kk --artifactory-url=${JFROG_URL} --access-token=${JFROG_TOKEN} --interactive=false
+"""
+
+                }
+            }
+        }
+    
+
 
         stage('Push DB Image to JFrog Artifactory') {
             when {
