@@ -41,12 +41,7 @@ pipeline {
                 
                }
             }
-          
-               
-         
-  
-       
-
+   
         stage('Build Docker Web Image') {
             steps {
                 sh '''
@@ -82,7 +77,9 @@ pipeline {
                 expression { params.PUSH_TO_ECR }
             }
             steps {
-                withEnv(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) {
+
+                withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://3.91.170.86:8200'], vaultSecrets: [[path: 'secret/aws', secretValues: [[vaultKey: 'AWS_ACCESS_KEY_ID'], [envVar: ' AWS_SECRET_ACCESS_KEY ', vaultKey: 'AWS_SECRET_ACCESS_KEY']]]]) 
+                {        
                     sh """
                       aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 931058976119.dkr.ecr.us-east-1.amazonaws.com
                       docker tag ${DOCKER_IMAGE_WEB}:latest ${ECR_REPO_WEB}:latest
