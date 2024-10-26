@@ -25,7 +25,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
            steps {
-               withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://3.92.18.117:8200'], vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[envVar: 'SONARQUBE_URL   ', vaultKey: 'SONARQUBE_URL'], [envVar: 'SONARQUBE_TOKEN ', vaultKey: 'SONARQUBE_TOKEN']]]]) 
+               withVault(configuration: [disableChildPoliciesOverride: false, timeout: 60, vaultCredentialId: 'vault-token', vaultUrl: 'http://3.92.18.117:8200'], vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[envVar: 'SONARQUBE_URL', vaultKey: 'SONARQUBE_URL'], [envVar: 'SONARQUBE_TOKEN', vaultKey: 'SONARQUBE_TOKEN']]]]) 
                {                 
                       sh """
                          sonar-scanner \
