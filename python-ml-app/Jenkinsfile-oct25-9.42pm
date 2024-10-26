@@ -138,21 +138,7 @@ pipeline {
         }
     }
 }
-        stage('Fetch JFrog Credentials') {
-    steps {
-        // Fetch secrets from HashiCorp Vault
-        withVault([
-            vaultSecrets: [
-                [path: 'secret/jfrog', secretValues: [
-                    [envVar: 'JFROG_URL', vaultKey: 'JFROG_URL'],
-                    [envVar: 'JFROG_TOKEN', vaultKey: 'JFROG_TOKEN']
-                ]]
-            ]
-        ]) {
-            echo 'Fetched JFrog credentials from Vault'
-        }
-    }
-}
+        
 
 
         stage('Fetch JFrog Credentials') {
