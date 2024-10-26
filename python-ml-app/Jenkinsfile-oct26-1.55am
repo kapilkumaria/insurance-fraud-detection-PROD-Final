@@ -197,8 +197,8 @@ stage('Push DB Image to JFrog Artifactory') {
                 ]) {
 
                 sh """
-                  echo "ECR_REPO_WEB: $ECR_REPO_WEB"
-                  echo "ECR_REPO_DB: $ECR_REPO_DB"
+                  echo "ECR_REPO_WEB: ${env.ECR_REPO_WEB}"
+                  echo "ECR_REPO_DB: ${env.ECR_REPO_DB}"
                   sed -i 's|IMAGE_PLACEHOLDER_WEB|${ECR_REPO_WEB}:${BUILD_NUMBER}|' python-ml-app-manifests/deployment-web.yaml
                   sed -i 's|IMAGE_PLACEHOLDER_DB|${ECR_REPO_DB}:${BUILD_NUMBER}|' python-ml-app-manifests/deployment-mysql.yaml
                 """
