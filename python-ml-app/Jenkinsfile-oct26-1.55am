@@ -150,8 +150,8 @@ stage('Push Web Image to JFrog Artifactory') {
             sh """
               docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
               
-              docker tag ${DOCKER_IMAGE_WEB}:latest ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_WEB}:latest
-              docker push ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_WEB}:latest
+              docker tag ${DOCKER_IMAGE_WEB}:latest ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_WEB}:${BUILD_NUMBER}
+              docker push ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_WEB}:${BUILD_NUMBER}
             """
         }
         echo "Web image pushed to JFrog Artifactory successfully."
@@ -171,8 +171,8 @@ stage('Push DB Image to JFrog Artifactory') {
             sh """
               docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
               
-              docker tag ${DOCKER_IMAGE_DB}:latest ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_DB}:latest
-              docker push ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_DB}:latest
+              docker tag ${DOCKER_IMAGE_DB}:latest ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
+              docker push ${jfrogUrlWithoutProtocol}/jaxx-docker-local/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
             """
         }
         echo "DB image pushed to JFrog Artifactory successfully."
