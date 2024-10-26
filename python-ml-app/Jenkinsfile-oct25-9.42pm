@@ -142,6 +142,9 @@ pipeline {
 
 
         stage('Fetch JFrog Credentials') {
+        when {
+        expression { params.PUSH_TO_ARTIFACTORY }
+        }
             steps {
                 // Fetch secrets from HashiCorp Vault
                 withVault([
@@ -162,6 +165,9 @@ pipeline {
         }
 
         stage('Upload to Artifactory') {
+        when {
+        expression { params.PUSH_TO_ARTIFACTORY }
+        }
             steps {
                 script {
                     // Configure JFrog CLI with credentials fetched from Vault
