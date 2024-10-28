@@ -217,7 +217,7 @@ stage('Update Kubernetes Manifests') {
             }
         }
     }
-}
+
 post {
         always {
             cleanWs()
