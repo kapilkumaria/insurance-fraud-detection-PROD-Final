@@ -146,8 +146,9 @@ stage('Push DB Image to JFrog Artifactory') {
     steps {
         sh """
           docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
-          docker tag ${DOCKER_IMAGE_DB}:latest ${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
-          docker push ${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
+          docker images
+          docker tag ${DOCKER_IMAGE_DB}:latest trial3w9kd2.jfrog.io/jaxx-docker-local/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
+          docker push trial3w9kd2.jfrog.io/jaxx-docker-local/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
         """
         echo "DB image pushed to JFrog Artifactory successfully."
     }
