@@ -216,7 +216,8 @@ stage('Update Kubernetes Manifests') {
             }
         }
     }
-    post {
+}
+post {
         always {
             cleanWs()
         }
@@ -227,5 +228,4 @@ stage('Update Kubernetes Manifests') {
             echo 'Pipeline failed.'
         }
     }
-}
 }
