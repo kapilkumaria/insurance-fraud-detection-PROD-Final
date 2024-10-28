@@ -176,7 +176,9 @@ pipeline {
                         [vaultKey: 'AWS_SECRET_ACCESS_KEY', envVar: 'AWS_SECRET_ACCESS_KEY']
                     ]],
                     [path: 'secret/ecr', secretValues: [
-                        [vaultKey: 'ECR_REPO_WEB', envVar: 'ECR_REPO_WEB']
+                        [vaultKey: 'ECR_REPO_WEB', envVar: 'ECR_REPO_WEB'],
+                        [vaultKey: 'ECR_REPO_DB', envVar: 'ECR_REPO_DB'],
+
                     ]]
                 ]) {
                     sh """
