@@ -20,7 +20,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withVault(configuration: [vaultCredentialId: 'vault-token', vaultUrl: 'http://3.239.169.81:8200'], 
+                withVault(configuration: [vaultCredentialId: 'vault-token', vaultUrl: 'http://3.235.58.200:8200'], 
                     vaultSecrets: [[path: 'secret/sonarqube', secretValues: [[envVar: 'SONARQUBE_URL', vaultKey: 'SONARQUBE_URL'], [envVar: 'SONARQUBE_TOKEN', vaultKey: 'SONARQUBE_TOKEN']]]]) {
                     sh """
                        echo "SonarQube URL: $SONARQUBE_URL"
