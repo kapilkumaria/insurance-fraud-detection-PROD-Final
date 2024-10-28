@@ -202,14 +202,20 @@ pipeline {
                     sh """
                       aws eks update-kubeconfig --region us-east-1 --name satkumaria-cluster  
                      
-              # Conditional deletion if resource exists
-              kubectl get -f python-ml-app-manifests/deployment-mysql.yaml && kubectl delete -f python-ml-app-manifests/deployment-mysql.yaml || echo "Deployment MySQL does not exist"
-              kubectl get -f python-ml-app-manifests/service-mysql.yaml && kubectl delete -f python-ml-app-manifests/service-mysql.yaml || echo "Service MySQL does not exist"
-              kubectl get -f python-ml-app-manifests/deployment-web.yaml && kubectl delete -f python-ml-app-manifests/deployment-web.yaml || echo "Deployment Web does not exist"
-              kubectl get -f python-ml-app-manifests/service-web.yaml && kubectl delete -f python-ml-app-manifests/service-web.yaml || echo "Service Web does not exist"
-              """                                          
-                    
+                    # Conditional deletion if resource exists
+                      kubectl get -f python-ml-app-manifests/deployment-mysql.yaml && kubectl delete -f python-ml-app-manifests/deployment-mysql.yaml || echo "Deployment MySQL does not exist"
+                      kubectl get -f python-ml-app-manifests/service-mysql.yaml && kubectl delete -f python-ml-app-manifests/service-mysql.yaml || echo "Service MySQL does not exist"
+                      kubectl get -f python-ml-app-manifests/deployment-web.yaml && kubectl delete -f python-ml-app-manifests/deployment-web.yaml || echo "Deployment Web does not exist"
+                      kubectl get -f python-ml-app-manifests/service-web.yaml && kubectl delete -f python-ml-app-manifests/service-web.yaml || echo "Service Web does not exist"
+                   
+                    # Applying the resouces to K8s Cluster, when do not want to use ArgoCD
+                      kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
+                      kubectl apply -f python-ml-app-manifests/service-mysql.yaml
+                      kubectl apply -f python-ml-app-manifests/deployment-web.yaml
+                      kubectl apply -f python-ml-app-manifests/service-web.yaml
+                    """
                     echo 'Application deployed to EKS successfully.'
+                    
                 }
             }
         }
