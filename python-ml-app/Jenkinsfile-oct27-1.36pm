@@ -191,6 +191,7 @@ stage('Update Kubernetes Manifests') {
                 echo 'Kubernetes manifests updated with the new image tags.'
             }
         }
+}
 
         stage('Deploy to EKS') {
             steps {
