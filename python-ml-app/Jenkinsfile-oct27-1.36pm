@@ -173,7 +173,7 @@ stage('Push DB Image to JFrog Artifactory') {
     }
 }
 
-        stage('Update Kubernetes Manifests') {
+stage('Update Kubernetes Manifests') {
             steps {
               withVault(vaultSecrets: [
                     [path: 'secret/aws', secretValues: [
