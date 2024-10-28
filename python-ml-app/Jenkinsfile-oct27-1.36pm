@@ -228,3 +228,4 @@ stage('Push DB Image to JFrog Artifactory') {
         }
     }
 }
+}
