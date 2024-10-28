@@ -123,17 +123,21 @@ pipeline {
                     [vaultKey: 'JFROG_URL', envVar: 'JFROG_URL'],
                     [vaultKey: 'JFROG_TOKEN', envVar: 'JFROG_TOKEN'],
                     [vaultKey: 'JFROG_USERNAME', envVar: 'JFROG_USERNAME']
+                    [vaultKey: 'JFROG_IMAGE_TAG', envVar: 'JFROG_IMAGE_TAG']
                 ]]
             ]) {
                 echo "Fetched JFrog credentials from Vault"
                 echo "JFROG_USERNAME: ${JFROG_USERNAME}"
                 echo "JFROG_TOKEN: ${JFROG_TOKEN}"
                 echo "JFROG_URL: ${JFROG_URL}"
+                echo "JFROG_IMAGE_TAG: ${JFROG_IMAGE_TAG}"
                 
                 // Make credentials available to the entire pipeline
                 env.JFROG_URL = JFROG_URL
                 env.JFROG_USERNAME = JFROG_USERNAME
-                env.JFROG_TOKEN = JFROG_TOKEN
+                env.JFROG_TOKEN = JFROG_TOKEN 
+                env.JFROG_IMAGE_TAG = JFROG_IMAGE_TAG
+
             }
         }
     }
@@ -147,8 +151,8 @@ stage('Push DB Image to JFrog Artifactory') {
         sh """
           docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
           docker images
-          docker tag ${DOCKER_IMAGE_DB}:latest trial3w9kd2.jfrog.io/jaxx-docker-local/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
-          docker push trial3w9kd2.jfrog.io/jaxx-docker-local/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
+          docker tag ${DOCKER_IMAGE_DB}:latest ${JFROG_IMAGE_TAG}/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
+          docker push ${JFROG_IMAGE_TAG}/${DOCKER_IMAGE_DB}:${BUILD_NUMBER}
         """
         echo "DB image pushed to JFrog Artifactory successfully."
     }
