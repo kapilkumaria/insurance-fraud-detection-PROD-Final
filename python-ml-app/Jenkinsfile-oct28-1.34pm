@@ -204,10 +204,7 @@ pipeline {
                       kubectl delete -f python-ml-app-manifests/service-mysql.yaml
                       kubectl delete -f python-ml-app-manifests/deployment-web.yaml
                       kubectl delete -f python-ml-app-manifests/service-web.yaml
-                      kubectl apply -f python-ml-app-manifests/deployment-mysql.yaml
-                      kubectl apply -f python-ml-app-manifests/service-mysql.yaml
-                      kubectl apply -f python-ml-app-manifests/deployment-web.yaml
-                      kubectl apply -f python-ml-app-manifests/service-web.yaml
+                      
                     """
                     echo 'Application deployed to EKS successfully.'
                 }
