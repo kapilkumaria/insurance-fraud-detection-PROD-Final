@@ -122,7 +122,7 @@ pipeline {
                 [path: 'secret/jfrog', secretValues: [
                     [vaultKey: 'JFROG_URL', envVar: 'JFROG_URL'],
                     [vaultKey: 'JFROG_TOKEN', envVar: 'JFROG_TOKEN'],
-                    [vaultKey: 'JFROG_USERNAME', envVar: 'JFROG_USERNAME']
+                    [vaultKey: 'JFROG_USERNAME', envVar: 'JFROG_USERNAME'],
                     [vaultKey: 'JFROG_IMAGE_TAG', envVar: 'JFROG_IMAGE_TAG']
                 ]]
             ]) {
