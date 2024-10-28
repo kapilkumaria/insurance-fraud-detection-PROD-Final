@@ -143,6 +143,21 @@ pipeline {
     }
 }
 
+stage('Push Web Image to JFrog Artifactory') {
+    when {
+        expression { params.PUSH_TO_ARTIFACTORY }
+    }
+    steps {
+        sh """
+          docker login ${JFROG_URL} --username ${JFROG_USERNAME} --password ${JFROG_TOKEN}
+          docker images
+          docker tag ${DOCKER_IMAGE_WEB}:latest ${JFROG_IMAGE_TAG}/${DOCKER_IMAGE_WEB}:${BUILD_NUMBER}
+          docker push ${JFROG_IMAGE_TAG}/${DOCKER_IMAGE_WEB}:${BUILD_NUMBER}
+        """
+        echo "DB image pushed to JFrog Artifactory successfully."
+    }
+}
+
 stage('Push DB Image to JFrog Artifactory') {
     when {
         expression { params.PUSH_TO_ARTIFACTORY }
