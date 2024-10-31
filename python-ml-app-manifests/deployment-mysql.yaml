@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: mysql
-          image: 931058976119.dkr.ecr.us-east-1.amazonaws.com/insurance-fraud-detection-db:latest
+          image: 931058976119.dkr.ecr.us-east-1.amazonaws.com/insurance-fraud-detection-db:8787
           ports:
             - containerPort: 3306
           env:
