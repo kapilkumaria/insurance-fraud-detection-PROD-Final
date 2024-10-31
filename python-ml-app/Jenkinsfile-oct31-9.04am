@@ -200,7 +200,7 @@ pipeline {
                 ]) {
                      
                     sh """
-                      aws eks update-kubeconfig --region us-east-1 --name satkumaria-cluster  
+                      aws eks update-kubeconfig --region us-east-1 --name satkumaria1512-cluster  
                      
                     # Conditional deletion if resource exists
                       kubectl get -f python-ml-app-manifests/deployment-mysql.yaml && kubectl delete -f python-ml-app-manifests/deployment-mysql.yaml || echo "Deployment MySQL does not exist"
